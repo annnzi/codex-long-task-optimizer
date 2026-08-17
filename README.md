@@ -1,4 +1,4 @@
-# codex-long-task-optimizer / Codex 长任务优化器
+# codex-long-task-optimizer
 
 一句话价值：把一段“拍脑袋”长需求，立刻切成可执行的阶段任务。  
 One-liner: Turn long, messy tasks into executable phase plans.
@@ -47,7 +47,7 @@ python -m src.long_task_optimizer --input examples/sample-task.txt --format md
 
 ## 你只需要记住的几条
 
-- `--input`：任务文本路径（默认 `examples/sample-task.txt`）
+- `--input`：任务文本路径，默认 `examples/sample-task.txt`
 - `--max-tokens`：单阶段预算，默认 `120`
 - `--format`：`md`（默认）或 `json`
 - `--no-risk`：隐藏风险段
@@ -77,12 +77,19 @@ python -m src.long_task_optimizer --input examples/sample-task.txt --format md
 - `python -m src.long_task_optimizer --max-tokens 180 --no-risk`
 - `python -m pytest -q`
 
+## 适配智能体 / Skill 接入
+
+- Skill 定义：[`SKILL.md`](SKILL.md)
+- 智能体使用手册：[`docs/USAGE_FOR_AGENTS.md`](docs/USAGE_FOR_AGENTS.md)
+- 支持把长任务快速转成给 AI 的可执行任务结构化计划。
+
 ## 项目结构（极简）
 
 - `src/long_task_optimizer.py`：核心代码
 - `examples/sample-task.txt`：示例输入
 - `tests/test_long_task_optimizer.py`：基础验证
 - `docs/context/`：上下文（静态/动态）
+- `docs/USAGE_FOR_AGENTS.md`：智能体使用手册
 - `.github/workflows/ci.yml`：自动检查
 
 ## 快速接入项目的入口
@@ -90,13 +97,4 @@ python -m src.long_task_optimizer --input examples/sample-task.txt --format md
 - 仓库首页：`https://github.com/annnzi/codex-long-task-optimizer`
 - 提 Issue：`https://github.com/annnzi/codex-long-task-optimizer/issues`
 - 贡献说明：请先看 [CONTRIBUTING.md](CONTRIBUTING.md)
-
-## 给别人的“快速复制”版本
-
-你可以把这段话直接发给协作者：
-
-> 这个项目是把长任务切成可执行阶段的轻量工具，2 分钟接入、可直接输出 Markdown 计划，适合做 Codex 任务拆解、Issue 复盘和 PR 说明。仓库欢迎直接提 Issue。
-
-## 许可证
-
-MIT，见 [LICENSE](LICENSE)。
+- 许可证：MIT，见 [LICENSE](LICENSE)。
