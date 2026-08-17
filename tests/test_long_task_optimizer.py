@@ -36,3 +36,10 @@ def test_build_report_minimum_shape(tmp_path: Path):
     assert "checkpoints" in report
     assert isinstance(report["checkpoints"], list)
     assert isinstance(report["checkpoints"][0]["work"], list)
+
+
+def test_version_constant_exists():
+    from src import __version__
+
+    assert isinstance(__version__, str)
+    assert __version__

@@ -9,12 +9,11 @@ from dataclasses import dataclass, asdict
 from datetime import datetime
 from pathlib import Path
 
+from src import __version__
 
 DEFAULT_SAMPLE_PATH = Path(__file__).resolve().parents[1] / "examples" / "sample-task.txt"
 APP_NAME = "codex-long-task-optimizer"
-VERSION = "0.1.1"
-
-DEFAULT_SAMPLE_PATH = Path(__file__).resolve().parents[1] / "examples" / "sample-task.txt"
+VERSION = __version__
 CHECKPOINT_LABELS = ["澄清边界", "最小可交付", "核心实现", "验证收尾"]
 SECTION_PATTERNS = {
     "目标": ("目标", "goal"),

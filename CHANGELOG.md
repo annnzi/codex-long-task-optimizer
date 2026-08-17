@@ -3,6 +3,8 @@
 ## Unreleased
 
 - Pending: release roadmap for v0.2
+- 优化版本一致性：将 CLI 运行版本来源统一为 `src.__version__`，避免版本散落。
+- 增加版本常量测试覆盖，降低后续发布误差。
 
 ## v0.1.5 - 2026-08-17
 
