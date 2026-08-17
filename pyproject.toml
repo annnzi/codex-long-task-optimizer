@@ -22,3 +22,6 @@ codex-long-task-optimizer = "src.long_task_optimizer:main"
 
 [project.urls]
 Homepage = "https://github.com/annnzi/codex-long-task-optimizer"
+Repository = "https://github.com/annnzi/codex-long-task-optimizer"
+Issues = "https://github.com/annnzi/codex-long-task-optimizer/issues"
+Changelog = "https://github.com/annnzi/codex-long-task-optimizer/blob/main/CHANGELOG.md"

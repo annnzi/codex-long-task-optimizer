@@ -1,95 +1,80 @@
 # codex-long-task-optimizer
 
-一个面向 Codex / 长任务协作场景的轻量 CLI 工具。  
-目标是把「需求描述」稳定转成可执行计划：**阶段划分、验收项、回退点、风险点**，减少一次性长任务带来的偏差。
+一句话价值：把一段“拍脑袋”长需求，立刻切成可执行的阶段任务。
 
-## 解决什么问题
+[![CI](https://github.com/annnzi/codex-long-task-optimizer/actions/workflows/ci.yml/badge.svg)](https://github.com/annnzi/codex-long-task-optimizer/actions/workflows/ci.yml)
 
-- 避免长任务一次性下发导致执行顺序乱、验收困难的问题。
-- 把任务说明中的「目标/范围/交付/约束/验收」内容落成可复用结构。
-- 支持快速复制到 Codex 对话框、Issue / PR 备注、交接文档。
+## 这是一个什么工具
 
-## 功能
+这个仓库不是复杂框架，只有一套核心逻辑：
 
-- 自动识别文本中的关键字段（目标、范围、交付、约束、验收）
-- 按 token 粗估（默认 120）切分为多个阶段
-- 输出 Markdown 或 JSON
-- 可选关闭风险段（`--no-risk`）
-- 支持直接输出到文件（`--out`）
-- 支持版本查看（`--version`）
+- 自动识别任务里的目标、范围、交付、约束、验收
+- 自动切成阶段，附带回退和风险点
+- 支持 Markdown / JSON 两种输出
+- 适合直接贴给 Codex、Issue、PR 或交接文档
 
-## 快速开始
+如果你经常遇到这种问题：
+
+- 需求太长，目标散了
+- 执行顺序乱了
+- 交付节点说不清
+- 最后验收靠猜
+
+这个工具的目的就是帮你把混乱变成“可执行清单”。
+
+## 2 分钟接入（新用户友好版）
+
+```bash
+git clone https://github.com/annnzi/codex-long-task-optimizer.git
+cd codex-long-task-optimizer
+
+python -m venv .venv
+# Windows PowerShell:
+# .\.venv\Scripts\Activate.ps1
+# macOS/Linux:
+# source .venv/bin/activate
+
+python -m pip install -e .
+python -m src.long_task_optimizer --input examples/sample-task.txt --format md
+```
+
+不用安装也能跑：
 
 ```bash
 python -m src.long_task_optimizer --input examples/sample-task.txt --format md
-python -m src.long_task_optimizer --input examples/sample-task.txt --format json
-python -m src.long_task_optimizer --input examples/sample-task.txt --out reports/plan.md --format md
-python -m src.long_task_optimizer --version
 ```
 
-### 参数说明
+## 你只需要记住的几条
 
 - `--input`：任务文本路径（默认 `examples/sample-task.txt`）
-- `--max-tokens`：每个阶段最大 token 粗估，默认 `120`
+- `--max-tokens`：单阶段预算，默认 `120`
 - `--format`：`md`（默认）或 `json`
-- `--no-risk`：不展示风险段
-- `--out`：将输出写到文件
-- `--version`：输出工具版本并退出
+- `--no-risk`：隐藏风险段
+- `--out`：生成文件
+- `--version`：看版本
 
-## 示例
+## 一键命令清单
 
-```bash
-python -m src.long_task_optimizer --input examples/sample-task.txt --format md
-```
-
-输出为：
-
-- 阶段列表
-- 每阶段工作项
-- 验收项
-- 回退方式
-- 风险提示
-
-## 项目结构
-
-- `src/long_task_optimizer.py`：核心解析与报告生成逻辑
-- `examples/sample-task.txt`：示例任务文本
-- `tests/test_long_task_optimizer.py`：基础测试
-- `docs/context/`：上下文与运行状态记录
-- `CHANGELOG.md`：版本变更记录
-- `.github/workflows/ci.yml`：基础 CI（pytest）
-
-## 开发
-
-### 开发环境建议
-
-- Python 3.9+
-- 纯标准库，无额外运行时依赖
-
-### 本地常用命令
-
-- `python -m src.long_task_optimizer --input examples/sample-task.txt --format json`
+- `python -m src.long_task_optimizer --format md`
+- `python -m src.long_task_optimizer --format json`
+- `python -m src.long_task_optimizer --out reports/plan.md --format md`
+- `python -m src.long_task_optimizer --max-tokens 180 --no-risk`
 - `python -m pytest -q`
 
-## 里程碑（运营节奏）
+## 项目结构（极简）
 
-1. **MVP 已上线**：文本分阶段输出、风险与回退点（v0.1.x）
-2. **可运营化**：贡献规范、模板、Issue 模板（v0.2）
-3. **生态接入**：增加与 CI/任务追踪系统的输出映射（v0.3）
+- `src/long_task_optimizer.py`：核心代码
+- `examples/sample-task.txt`：示例输入
+- `tests/test_long_task_optimizer.py`：基础验证
+- `docs/context/`：上下文（静态/动态）
+- `.github/workflows/ci.yml`：自动检查
 
-## 贡献
+## 快速接入项目的入口
 
-请阅读 [CONTRIBUTING.md](CONTRIBUTING.md) 后提交。
+- 仓库首页：`https://github.com/annnzi/codex-long-task-optimizer`
+- 提 Issue：`https://github.com/annnzi/codex-long-task-optimizer/issues`
+- 贡献说明：请先看 [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ## 许可证
 
-MIT，详见 [LICENSE](LICENSE)。
-
-## 维护者说明（给申请活动准备）
-
-如果你准备申请 OpenAI 的开源维护者计划，请优先准备：
-
-- `README` 的真实使用价值（解决场景）
-- 公开项目历史（commit / issue / release）
-- 持续维护动作（每周至少更新一次）
-- 明确的可量化价值点（stars、依赖、实际使用）
+MIT，见 [LICENSE](LICENSE)。
