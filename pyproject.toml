@@ -12,5 +12,4 @@ license = {text = "MIT"}
 authors = [{name = "Codex Project"}]
 
 [project.urls]
-Homepage = "https://github.com/YOUR_GITHUB_USERNAME/codex-long-task-optimizer"
-
+Homepage = "https://github.com/<YOUR_GITHUB_USERNAME>/codex-long-task-optimizer"
