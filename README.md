@@ -1,6 +1,7 @@
-# codex-long-task-optimizer
+# codex-long-task-optimizer / Codex 长任务优化器
 
-一句话价值：把一段“拍脑袋”长需求，立刻切成可执行的阶段任务。
+一句话价值：把一段“拍脑袋”长需求，立刻切成可执行的阶段任务。  
+One-liner: Turn long, messy tasks into executable phase plans.
 
 [![CI](https://github.com/annnzi/codex-long-task-optimizer/actions/workflows/ci.yml/badge.svg)](https://github.com/annnzi/codex-long-task-optimizer/actions/workflows/ci.yml)
 
