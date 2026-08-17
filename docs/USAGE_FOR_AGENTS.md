@@ -1,4 +1,4 @@
-# codex-long-task-optimizer for Agents / 智能体使用手册
+# Task optimizer for long tasks (Agentic & Codex workflows) / 智能体使用手册
 
 ## 一句话能力 / One-line capability
 - 输入任务文本，输出“阶段化执行计划”（含验收、回退、风险）。

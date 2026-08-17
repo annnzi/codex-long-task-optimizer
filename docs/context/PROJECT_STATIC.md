@@ -3,7 +3,7 @@
 最后验证：2026-08-17（按需同步）
 
 ## 项目范围与目标
-- `codex-long-task-optimizer` 是一个用于将长任务文本按阶段拆解的 Python CLI 工具，目标是降低长任务一次性执行时的偏差并提高可复用性。  
+- `Task optimizer for long tasks (Agentic & Codex workflows)`（技术名：`codex-long-task-optimizer`）是一个用于将长任务文本按阶段拆解的 Python CLI 工具，目标是降低长任务一次性执行时的偏差并提高可复用性。  
   - 来源：`README.md`
   - 验证提交：`ce84c53`（最新）
 

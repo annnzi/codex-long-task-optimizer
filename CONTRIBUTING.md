@@ -1,6 +1,6 @@
 # 贡献指南
 
-欢迎加入 `codex-long-task-optimizer`。
+欢迎加入 `Task optimizer for long tasks (Agentic & Codex workflows)`（仓库技术名：`codex-long-task-optimizer`）。
 
 ## 提交要求
 1. 题目清晰：提交说明需写明“解决什么问题 + 预期效果”。

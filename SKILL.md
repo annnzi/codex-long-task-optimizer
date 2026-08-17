@@ -1,4 +1,4 @@
-# Skill: Codex Long Task Optimizer
+# Skill: Task optimizer for long tasks (Agentic & Codex workflows)
 
 ## 目标 / Purpose
 - 为其它智能体提供“长任务结构化切分”为可执行阶段计划的通用能力。
@@ -36,7 +36,8 @@
 
 ## 命令映射 / Command mapping
 - CLI：`python -m src.long_task_optimizer --input <path> --format <md|json> [--max-tokens N] [--no-risk] [--out <path>]`
-- 直接安装包名脚本：`codex-long-task-optimizer --input ...`
+- 安装后脚本：`codex-long-task-optimizer --input ...`
+- 项目展示名：`Task optimizer for long tasks (Agentic & Codex workflows)`（对应 README 与主页文案）。
 
 ## 关键约束 / Constraints
 - 不新增额外外部依赖（默认标准库优先）。

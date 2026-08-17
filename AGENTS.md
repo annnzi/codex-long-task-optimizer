@@ -2,6 +2,7 @@
 
 ## 项目核心目标
 - 维持 `codex-long-task-optimizer` 为一个轻量的 Python CLI 工具：将长任务文本拆解为可执行阶段。
+- 展示名：`Task optimizer for long tasks (Agentic & Codex workflows)`。
 
 ## 目录和模块边界
 - `src/long_task_optimizer.py`：核心执行逻辑与入口。

@@ -1,4 +1,5 @@
-# codex-long-task-optimizer / Codex Long Task Optimizer
+# Task optimizer for long tasks (Agentic & Codex Workflows)
+## (codex-long-task-optimizer)
 
 一句话价值：把一段“拍脑袋”长需求，立刻切成可执行的阶段任务。  
 One-liner: Turn long, messy task descriptions into executable phase plans.
@@ -100,6 +101,44 @@ Expected output signals:
 - `python -m src.long_task_optimizer --out reports/plan.md --format md`
 - `python -m src.long_task_optimizer --max-tokens 180 --no-risk`
 - `python -m pytest -q`
+
+## 示例 / Quick example
+
+### 示例输入 / Input sample
+
+`examples/sample-task.txt`
+
+```text
+目标：完成一个长任务拆解工具的迭代发布
+范围：支持 3 个阶段输出和一个回退点
+交付：输出包含验收标准的 Markdown 报告
+约束：不引入第三方依赖
+验收：每个阶段可直接执行，并能用于 PR 说明
+```
+
+### 示例输出（Markdown） / Sample output (Markdown)
+
+```md
+## Phase 1
+- 可执行项：梳理任务目标与边界
+- 验收：目标、范围、交付、约束、验收提取完整
+- 回退点：保留原始任务文本版本
+- 风险：字段识别可能遗漏边界语句
+```
+
+### 示例输出（JSON） / Sample output (JSON)
+
+```json
+{
+  "phases": 1,
+  "items": [
+    {
+      "phase": 1,
+      "deliverables": ["梳理目标与边界", "生成首轮验收清单"]
+    }
+  ]
+}
+```
 
 ## 适配智能体 / Skill integration
 
