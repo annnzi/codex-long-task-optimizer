@@ -19,6 +19,8 @@
   - 来源：`README.md`
 - `CONTRIBUTING.md`：变更方式与调试约定。  
   - 来源：`CONTRIBUTING.md`
+- `docs/OPERATIONS.md`：维护节奏与发布策略（2 小时窗口、挤牙膏式发布）。  
+  - 来源：`docs/OPERATIONS.md`
 - `AGENTS.md`：本项目每次任务必须遵循的全局规则。  
   - 来源：`AGENTS.md`
 - `CHANGELOG.md`：版本迭代记录。  
