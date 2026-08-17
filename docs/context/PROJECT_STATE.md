@@ -4,7 +4,7 @@
 
 ## 当前分支与 HEAD
 - 当前分支：`main`
-- HEAD：`ad9754e`（本地最新提交）
+- HEAD：`ce84c53`（本地与远端 `origin/main` 最新提交）
 - 工作区：有未提交改动（v0.1.1 运营化补强中）
 
 ## 最近代码修改
@@ -24,7 +24,7 @@
 
 ## 已知问题
 - 运行环境中 `python` / `pytest` 可用性仍有波动（当前未在本次会话执行完整本地验证）。
-- GitHub `origin` 尚未配置；推送到 `https://github.com/annnzi/codex-long-task-optimizer.git` 尚待执行。
+- GitHub `origin` 已配置并推送成功：`https://github.com/annnzi/codex-long-task-optimizer.git`。
 
 ## 最新报错
 - 暂无新增报错输出；历史报错主要为本地 Python 环境不可用导致执行测试受限（此前记录）。
@@ -34,8 +34,8 @@
 - CI 运行目标已配置：`python -m pip install -e .`、CLI smoke check、`pytest`。
 
 ## 最新运行和部署结果
-- 已保留本地提交历史：`ad9754e`（0.1.0）。
-- 本轮改动为未提交状态，目标是先完成一次最小运营版本后提交并推送。
+- 已保留本地提交历史：`ce84c53`（0.1.1）。
+- 本轮改动已完成提交并推送到远端 `origin/main`。
 
 ## 缓存与清理说明
 - 本文件仅保留最近有效动态信息，便于下一次任务快速复用。

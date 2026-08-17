@@ -5,7 +5,7 @@
 ## 项目范围与目标
 - `codex-long-task-optimizer` 是一个用于将长任务文本按阶段拆解的 Python CLI 工具，目标是降低长任务一次性执行时的偏差并提高可复用性。  
   - 来源：`README.md`
-  - 验证提交：`ad9754e` 起并持续更新
+  - 验证提交：`ce84c53`（最新）
 
 ## 目录与模块职责
 - `src/long_task_optimizer.py`：  
@@ -58,9 +58,9 @@
   - 来源：`src/long_task_optimizer.py`
 
 ## 依赖与配置（当前状态）
-- 在目标目录未发现集中式依赖清单/构建配置/测试配置文件（如 `requirements.txt`、`pyproject.toml`、`setup.py`、`setup.cfg`、`tox.ini`、`.github/workflows`）。  
-  - 来源：本次仓库读取范围扫描（`codex-long-task-optimizer` 及子目录，3 层深度）  
-  - 验证提交：`无提交`
+- `pyproject.toml` 已配置构建、版本、脚本入口与项目信息。  
+  - 来源：`pyproject.toml`  
+  - 验证提交：`ce84c53`
 
 ## 核心约束与边界（待验证项）
 - Python 运行版本下限在 `pyproject.toml` 声明为 `>=3.9`，CI 使用 Python 3.11。  
