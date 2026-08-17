@@ -4,30 +4,38 @@
 
 ## 当前分支与 HEAD
 - 当前分支：`main`
-- HEAD：`dd4a15a`（当前待发布主线，完整项目首版提交）
+- HEAD：`ad9754e`（本地最新提交）
+- 工作区：有未提交改动（v0.1.1 运营化补强中）
 
 ## 最近代码修改
-- 独立仓库初始化并提交（子仓库 `codex-long-task-optimizer`）。
-- 近期更新包含：`AGENTS.md`、`docs/context/`、`.github/workflows/ci.yml`、`pyproject.toml`、`tests/`。
-- 根仓库的其他素材目录未包含在本项目子仓库范围。
+- 本轮新增：
+  - `src/long_task_optimizer.py`：支持 `--version`、`--out`，强化字段别名解析和参数校验
+  - `README.md`：补充使用说明、运营节奏和申请背景说明
+  - `CONTRIBUTING.md`：补齐版本发布说明
+  - `CHANGELOG.md`：新增变更记录
+  - `.github/ISSUE_TEMPLATE/*`：Bug 与 Feature Issue 模板
+  - `.github/PULL_REQUEST_TEMPLATE.md`：PR 模板
+  - `SECURITY.md`：安全说明
+  - `.github/workflows/ci.yml`：新增安装和 CLI smoke check
+  - `pyproject.toml`：更新版本、脚本入口、主页链接
 
 ## 当前任务
-- 目标：将仓库上线到 GitHub，作为可直接用于 `Codex for OSS` 申报的公开项目。
+- 目标：把仓库沉淀为“可持续运营”的开源项目，积累可被审核方读取的维护证据。
 
 ## 已知问题
-- 机器上的 `python` 为 Windows Store 占位符，`pytest` 当前不可用，无法在本地执行完整测试。
-- 该仓库尚未配置 GitHub 远端 `origin`，未完成推送。
+- 运行环境中 `python` / `pytest` 可用性仍有波动（当前未在本次会话执行完整本地验证）。
+- GitHub `origin` 尚未配置；推送到 `https://github.com/annnzi/codex-long-task-optimizer.git` 尚待执行。
 
 ## 最新报错
-- `python -m pytest -q` 在当前环境执行失败（无可用 Python/pytest），未产生命令级错误回显快照。
+- 暂无新增报错输出；历史报错主要为本地 Python 环境不可用导致执行测试受限（此前记录）。
 
 ## 最新测试结果
-- 本地测试未通过环境依赖检查：缺少可用 Python/pytest。
-- CI 配置已就绪：`.github/workflows/ci.yml`（推送到 `main` 时执行 `python -m pytest -q`）。
+- 本地测试未在本次会话执行（遵循你要求不重复验证）。
+- CI 运行目标已配置：`python -m pip install -e .`、CLI smoke check、`pytest`。
 
 ## 最新运行和部署结果
-- 成功在 `C:\Users\19967\Documents\搜索\codex-long-task-optimizer` 初始化独立 Git 仓库并提交：`dd4a15a`。
-- 远端推送尚未执行。
+- 已保留本地提交历史：`ad9754e`（0.1.0）。
+- 本轮改动为未提交状态，目标是先完成一次最小运营版本后提交并推送。
 
 ## 缓存与清理说明
 - 本文件仅保留最近有效动态信息，便于下一次任务快速复用。

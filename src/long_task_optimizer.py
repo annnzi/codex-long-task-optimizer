@@ -11,7 +11,18 @@ from pathlib import Path
 
 
 DEFAULT_SAMPLE_PATH = Path(__file__).resolve().parents[1] / "examples" / "sample-task.txt"
+APP_NAME = "codex-long-task-optimizer"
+VERSION = "0.1.1"
+
+DEFAULT_SAMPLE_PATH = Path(__file__).resolve().parents[1] / "examples" / "sample-task.txt"
 CHECKPOINT_LABELS = ["澄清边界", "最小可交付", "核心实现", "验证收尾"]
+SECTION_PATTERNS = {
+    "目标": ("目标", "goal"),
+    "范围": ("范围", "scope"),
+    "交付": ("交付", "deliverable", "输出", "output"),
+    "约束": ("约束", "constraints"),
+    "验收": ("验收", "acceptance"),
+}
 
 
 @dataclass
@@ -31,6 +42,9 @@ def _read_text(path: Path) -> str:
 
 
 def _split_text(text: str, max_tokens: int) -> list[str]:
+    if max_tokens <= 0:
+        raise ValueError("max_tokens 必须大于 0")
+
     raw_chunks = [c.strip() for c in re.split(r"[。？！；;!\n\r]", text) if c.strip()]
     chunks = []
     current = []
@@ -50,22 +64,26 @@ def _split_text(text: str, max_tokens: int) -> list[str]:
 
 
 def _extract_sections(text: str) -> dict[str, str]:
-    headers = {
-        "目标": "",
-        "范围": "",
-        "交付": "",
-        "约束": "",
-        "验收": "",
-    }
+    headers = {k: "" for k in SECTION_PATTERNS}
     lines = text.splitlines()
     current = "目标"
+    key_map = {}
+    for section, aliases in SECTION_PATTERNS.items():
+        for alias in aliases:
+            key_map[alias] = section
     for line in lines:
         line_stripped = line.strip()
-        if any(h in line_stripped for h in ["目标", "范围", "交付", "约束", "验收", "output", "output:"]):
-            for key in headers:
-                if key in line_stripped:
-                    current = key
-                    break
+        matched = None
+        normalized = re.split(r"[:：]", line_stripped, maxsplit=1)[0].strip()
+        for alias, section in key_map.items():
+            if normalized.startswith(alias):
+                matched = section
+                break
+        if matched:
+            current = matched
+            suffix = line_stripped[len(normalized):].lstrip(":：").strip()
+            if suffix:
+                headers[current] += (suffix + " ")
         else:
             headers[current] += (line_stripped + " ")
     return {k: v.strip() for k, v in headers.items()}
@@ -121,6 +139,7 @@ def _to_markdown(data: dict) -> str:
         f"- 生成时间：{data['generated_at']}",
         f"- 复杂度：{data['complexity']}/100",
         f"- 目标摘要：{data['summary']}",
+        f"- 估算风险项：{len(data['checkpoints'])} 阶段",
         "",
         "## 风险点与建议",
         "- 先写清边界，尽量只改一件事",
@@ -150,17 +169,27 @@ def main() -> None:
     parser.add_argument("--max-tokens", type=int, default=120, help="每个阶段最大 token 估算")
     parser.add_argument("--format", choices=["md", "json"], default="md", help="输出格式")
     parser.add_argument("--no-risk", action="store_true", help="不输出风险章节")
+    parser.add_argument("--out", help="将结果写入到指定文件")
+    parser.add_argument("--version", action="store_true", help="输出版本并退出")
     args = parser.parse_args()
+
+    if args.version:
+        print(f"{APP_NAME} {VERSION}")
+        return
 
     text = _read_text(Path(args.input))
     report = build_report(text, max_tokens=args.max_tokens, no_risk=args.no_risk)
 
     if args.format == "json":
-        print(json.dumps(report, ensure_ascii=False, indent=2))
+        output = json.dumps(report, ensure_ascii=False, indent=2)
     else:
-        print(_to_markdown(report))
+        output = _to_markdown(report)
+
+    if args.out:
+        Path(args.out).write_text(output, encoding="utf-8")
+    else:
+        print(output)
 
 
 if __name__ == "__main__":
     main()
-

@@ -4,12 +4,21 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "codex-long-task-optimizer"
-version = "0.1.0"
+version = "0.1.1"
 description = "Generate actionable checkpoints from long tasks for Codex-style execution."
 readme = "README.md"
 requires-python = ">=3.9"
 license = {text = "MIT"}
 authors = [{name = "Codex Project"}]
+keywords = ["codex", "task-planning", "cli", "long-task", "ai-workflow"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+]
+
+[project.scripts]
+codex-long-task-optimizer = "src.long_task_optimizer:main"
 
 [project.urls]
-Homepage = "https://github.com/<YOUR_GITHUB_USERNAME>/codex-long-task-optimizer"
+Homepage = "https://github.com/annnzi/codex-long-task-optimizer"
