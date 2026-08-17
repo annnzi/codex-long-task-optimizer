@@ -53,6 +53,21 @@ python -m src.long_task_optimizer --input examples/sample-task.txt --format md
 - `--out`：生成文件
 - `--version`：看版本
 
+## 30 秒验收（最重要）
+
+运行这条后，终端里看到“阶段/验收/回退点”就算接入成功：
+
+```bash
+python -m src.long_task_optimizer --input examples/sample-task.txt --format md
+```
+
+期待看到的输出特征：
+
+- 已按阶段拆解任务
+- 每阶段带可执行项
+- 包含验收标准
+- 至少有一条风险提示（除非你用了 `--no-risk`）
+
 ## 一键命令清单
 
 - `python -m src.long_task_optimizer --format md`
@@ -74,6 +89,12 @@ python -m src.long_task_optimizer --input examples/sample-task.txt --format md
 - 仓库首页：`https://github.com/annnzi/codex-long-task-optimizer`
 - 提 Issue：`https://github.com/annnzi/codex-long-task-optimizer/issues`
 - 贡献说明：请先看 [CONTRIBUTING.md](CONTRIBUTING.md)
+
+## 给别人的“快速复制”版本
+
+你可以把这段话直接发给协作者：
+
+> 这个项目是把长任务切成可执行阶段的轻量工具，2 分钟接入、可直接输出 Markdown 计划，适合做 Codex 任务拆解、Issue 复盘和 PR 说明。仓库欢迎直接提 Issue。
 
 ## 许可证
 
