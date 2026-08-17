@@ -1,6 +1,6 @@
 # PROJECT_STATIC（静态上下文）
 
-最后验证：2026-08-17
+最后验证：2026-08-17（按需同步）
 
 ## 项目范围与目标
 - `codex-long-task-optimizer` 是一个用于将长任务文本按阶段拆解的 Python CLI 工具，目标是降低长任务一次性执行时的偏差并提高可复用性。  
@@ -50,6 +50,12 @@
   - 来源：`src/long_task_optimizer.py`
 - 生成的执行计划强调可复用性和可回退性。  
   - 来源：`README.md`、`src/long_task_optimizer.py`
+
+## 稳定性说明
+- 本文件中的内容默认复用；若以下来源变化需同步修订：
+  - `src/long_task_optimizer.py`
+  - 关键输入输出约定、业务约束、目录边界
+  - `AGENTS.md` 与 `docs/OPERATIONS.md`
 
 ## 关键设计决策
 - 任务切分以词数近似作为 token 估算，默认上限 120。  
