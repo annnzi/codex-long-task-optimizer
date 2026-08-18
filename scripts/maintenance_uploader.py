@@ -33,6 +33,7 @@ import time
 import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Optional
 
 ROUND_COUNTER_LABEL_PATTERN = re.compile(
     r"((?:当前窗口计数|窗口计数)\s*[:：]?\s*)`?\s*\d+\s*/\s*\d+\s*`?"
@@ -249,7 +250,7 @@ def _tag_round_upload(
     cycle_version: str,
     *,
     tag_prefix: str = "v",
-) -> str | None:
+) -> Optional[str]:
     tag_name = f"{tag_prefix}{cycle_version}"
     try:
         _run_cmd(["git", "rev-parse", "--verify", tag_name], repo_dir)
@@ -277,7 +278,7 @@ def _upload_if_due(
     now_ts: float,
     args: argparse.Namespace,
     cycle_version: str,
-) -> tuple[bool, str, str, str]:
+) -> tuple[bool, str, str, Optional[str]]:
     state = _load_uploader_state(repo_dir)
     mode = _classify_upload_type(round_count)
     if mode == "idle":
@@ -477,7 +478,7 @@ def _run_once(repo_dir: Path, state_file: Path, args: argparse.Namespace) -> Non
     now_ts = time.time()
     signature = _project_signature(repo_dir)
     upload_state_for_backup = _load_uploader_state(repo_dir)
-    backup_path: Path | None
+    backup_path: Optional[Path]
     if signature != upload_state_for_backup.get("last_backup_signature", ""):
         backup_path = _create_backup(repo_dir)
         upload_state_for_backup["last_backup_ts"] = now_ts
@@ -614,3 +615,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+

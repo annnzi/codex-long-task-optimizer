@@ -8,12 +8,13 @@
 
 ## 当前分支与 HEAD
 - 当前分支：`main`
-- HEAD：`c415baf`
+- HEAD：`f0c90c8`（待同步）
 - 工作区：无未提交改动（`git status` 为空）
 
 ## 最近代码修改
 - 本轮新增：修复 `maintenance_uploader.py` 里 `--set-round 0` 重置语义（重置为 1）与轮次回写时双反引号替换问题，并同步 `docs/OPERATIONS.md` 与 `CHANGELOG.md` 说明。
 - 本轮新增：`maintenance_uploader.py` 增加 `--tag-on-upload` 与 `--tag-prefix`；到窗口提交成功后自动创建并推送 `v<cycle_version>` 标签，提升上传证据闭环。
+- 本轮新增：修复 `maintenance_uploader.py` 的 Python 3.9 兼容性（`str | None` / `Path | None` -> `Optional[...]`），防止定时脚本在 3.9 环境语法报错。
 - 本轮新增：`_extract_sections` 支持中文全角/中文括号数字前缀（如 `1）`、`（2）`）的标签行，并补充解析回归测试。
 - 本轮新增：维护上传器支持项目指纹备份、损坏状态恢复、预览不消耗上传计时，并排除 `.maintenance/` 目录进入 Git 上传。
 - 本轮新增：`--input` 与 `--out` 支持 `~` 用户目录展开，并在输出写入失败时输出可读错误后以状态码 2 退出；新增 `~` 路径输入回归测试。
@@ -78,8 +79,8 @@
 - CI 目标仍是：`python -m pip install -e .`、CLI smoke check、`pytest`。
 
 ## 最新运行和部署结果
-- 最近一次已推送提交：`c415baf`
-- 当前轮次已推送：`4adb8c3`（未新增 Tag）。
+- 最近一次已推送提交：`c415baf`（包含 `--tag-on-upload` 版本化上传能力）。
+- 当前轮次：本次修复未推送；待提交。
 - 已执行优化点：  
   - `src/long_task_optimizer.py`：修复 `complexity` 计算口径为词数并更正 md 输出标签；新增 `--status` 支持。  
 - `tests/test_long_task_optimizer.py`：补充 `--status` 输出测试。  
