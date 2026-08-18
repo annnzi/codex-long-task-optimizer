@@ -78,7 +78,7 @@
 
 ## 最新运行和部署结果
 - 最近一次已推送提交：`2837725`（tag: `v0.1.7`）
-- 本轮当前仍未推送（按本地连续优化后再同步）。
+- 当前轮次已推送：`4adb8c3`（未新增 Tag）。
 - 已执行优化点：  
   - `src/long_task_optimizer.py`：修复 `complexity` 计算口径为词数并更正 md 输出标签；新增 `--status` 支持。  
 - `tests/test_long_task_optimizer.py`：补充 `--status` 输出测试。  
