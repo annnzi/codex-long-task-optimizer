@@ -8,7 +8,7 @@
 
 ## 当前分支与 HEAD
 - 当前分支：`main`
-- HEAD：`f0c90c8`（待同步）
+- HEAD：`8d91fa8`
 - 工作区：无未提交改动（`git status` 为空）
 
 ## 最近代码修改
@@ -79,8 +79,8 @@
 - CI 目标仍是：`python -m pip install -e .`、CLI smoke check、`pytest`。
 
 ## 最新运行和部署结果
-- 最近一次已推送提交：`c415baf`（包含 `--tag-on-upload` 版本化上传能力）。
-- 当前轮次：本次修复未推送；待提交。
+- 最近一次已推送提交：`8d91fa8`（`fix(maintenance): restore py39 compatibility in uploader types`，包含 `maintenance_uploader.py` 3.9 兼容性修复）。
+- 当前轮次：本次修复已同步到远端。
 - 已执行优化点：  
   - `src/long_task_optimizer.py`：修复 `complexity` 计算口径为词数并更正 md 输出标签；新增 `--status` 支持。  
 - `tests/test_long_task_optimizer.py`：补充 `--status` 输出测试。  
