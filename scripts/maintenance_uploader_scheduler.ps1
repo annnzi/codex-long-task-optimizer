@@ -4,6 +4,8 @@ param(
     [switch]$Execute,
     [switch]$AutoRound,
     [switch]$AutoExecute,
+    [switch]$TagOnUpload,
+    [string]$TagPrefix = "v",
     [string]$PythonCmd = "python",
     [int]$VersionStep = 2,
     [string]$LogPath,
@@ -131,6 +133,13 @@ try {
     }
     if ($AutoExecute) {
         $args += "--auto-execute"
+    }
+    if ($TagOnUpload) {
+        $args += "--tag-on-upload"
+    }
+    if (-not [string]::IsNullOrWhiteSpace($TagPrefix)) {
+        $args += "--tag-prefix"
+        $args += $TagPrefix
     }
 
     & $PythonCmd @args

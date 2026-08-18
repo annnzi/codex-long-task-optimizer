@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Pending: release roadmap for v0.2
+- 维护上传器新增 `--tag-on-upload`（配合 `--auto-execute` 可在到达窗口提交后自动创建并推送 `v<cycle_version>` 标签），提升每轮上传成果可追溯性，减少手工打 tag 漏项。
 
 - 维护脚本修复：`maintenance_uploader.py` 将 `--set-round` 的 `0` 明确为“重置到 1”，避免文档中“复位”操作跳到末轮；同时修正窗口计数写回时的轮次行覆盖逻辑，避免重复反引号副作用。
 - 优化 `max_tokens` 切片在中文无空格长句场景下的行为：在无分词空格时按字符回退计数，补充中文边界回归测试。

@@ -18,6 +18,8 @@ Usage examples:
   python scripts/maintenance_uploader.py --repo . --auto-execute
 - 进入自动执行上传（按 2 轮一版）：
   python scripts/maintenance_uploader.py --repo . --auto-round --auto-execute --version-step 2
+- 进入自动执行上传并自动打标签（按 2 轮一版）：
+  python scripts/maintenance_uploader.py --repo . --auto-round --auto-execute --tag-on-upload --version-step 2
 """ 
 
 from __future__ import annotations
@@ -238,16 +240,48 @@ def _run_cmd(cmd: list[str], repo_dir: Path) -> None:
     subprocess.run(cmd, cwd=repo_dir, check=True)
 
 
+def _push_tags(repo_dir: Path) -> None:
+    _run_cmd(["git", "push", "--tags"], repo_dir)
+
+
+def _tag_round_upload(
+    repo_dir: Path,
+    cycle_version: str,
+    *,
+    tag_prefix: str = "v",
+) -> str | None:
+    tag_name = f"{tag_prefix}{cycle_version}"
+    try:
+        _run_cmd(["git", "rev-parse", "--verify", tag_name], repo_dir)
+        return None
+    except subprocess.CalledProcessError:
+        pass
+    _run_cmd(
+        [
+            "git",
+            "tag",
+            "-a",
+            tag_name,
+            "-m",
+            f"Maintenance snapshot for cycle {cycle_version}",
+        ],
+        repo_dir,
+    )
+    _push_tags(repo_dir)
+    return tag_name
+
+
 def _upload_if_due(
     repo_dir: Path,
     round_count: int,
     now_ts: float,
     args: argparse.Namespace,
-) -> tuple[bool, str, str]:
+    cycle_version: str,
+) -> tuple[bool, str, str, str]:
     state = _load_uploader_state(repo_dir)
     mode = _classify_upload_type(round_count)
     if mode == "idle":
-        return False, "本轮未触发上传门槛（1/2/10轮）", mode
+        return False, "本轮未触发上传门槛（1/2/10轮）", mode, ""
 
     interval = args.major_interval_seconds if mode == "major" else args.small_interval_seconds
     key = "last_major_upload" if mode == "major" else "last_small_upload"
@@ -259,12 +293,13 @@ def _upload_if_due(
             False,
             f"{mode} 上传未到时间：已过 {mins} 分钟（目标 {need} 分钟）",
             mode,
+            "",
         )
 
     if not _git_has_changes(repo_dir):
         state[key]["ts"] = now_ts
         _save_uploader_state(repo_dir, state)
-        return False, f"无代码变更，跳过 {mode} 上传", mode
+        return False, f"无代码变更，跳过 {mode} 上传", mode, ""
 
     if args.execute:
         _run_cmd(
@@ -282,14 +317,24 @@ def _upload_if_due(
         commit_msg = f"{args.commit_prefix}: {mode}轮次 {round_count} 上传快照"
         _run_cmd(["git", "commit", "-m", commit_msg], repo_dir)
         _run_cmd(["git", "push"], repo_dir)
+        uploaded_tag = ""
+        if args.tag_on_upload:
+            uploaded_tag = _tag_round_upload(
+                repo_dir,
+                cycle_version,
+                tag_prefix=args.tag_prefix,
+            )
         state[key] = {"ts": now_ts, "round": round_count}
         _save_uploader_state(repo_dir, state)
-        return True, f"{mode} 上传已执行：{commit_msg}", mode
+        if uploaded_tag:
+            return True, f"{mode} 上传已执行：{commit_msg}，已创建标签 {uploaded_tag}", mode, uploaded_tag
+        return True, f"{mode} 上传已执行：{commit_msg}", mode, uploaded_tag
 
     return (
         False,
         f"到达 {mode} 上传窗口（轮次 {round_count}），建议执行：python scripts/maintenance_uploader.py --execute",
         mode,
+        "",
     )
 
 
@@ -461,6 +506,7 @@ def _run_once(repo_dir: Path, state_file: Path, args: argparse.Namespace) -> Non
     )
 
     if round_source == "parse_failed":
+        uploaded_tag = ""
         uploaded = False
         mode = "error"
         message = f"轮次解析失败：{parse_error}，已跳过上传判断。"
@@ -470,7 +516,13 @@ def _run_once(repo_dir: Path, state_file: Path, args: argparse.Namespace) -> Non
             upload_ns = argparse.Namespace(**vars(args))
             upload_ns.execute = True
             upload_args = upload_ns
-        uploaded, message, mode = _upload_if_due(repo_dir, round_count, now_ts, upload_args)
+        uploaded, message, mode, uploaded_tag = _upload_if_due(
+            repo_dir,
+            round_count,
+            now_ts,
+            upload_args,
+            cycle_version,
+        )
 
     post_upload_state = _load_uploader_state(repo_dir)
     if round_source != "parse_failed":
@@ -498,6 +550,7 @@ def _run_once(repo_dir: Path, state_file: Path, args: argparse.Namespace) -> Non
         "project_version": base_version,
         "cycle_version": cycle_version,
         "version_step": args.version_step,
+        "cycle_tag": uploaded_tag if uploaded else "",
         "backup_done": bool(backup_path),
         "uploaded": uploaded,
         "message": message,
@@ -534,6 +587,8 @@ def main() -> None:
     parser.add_argument("--execute", action="store_true", help="允许执行 git add/commit/push（默认仅输出建议）")
     parser.add_argument("--commit-prefix", default="chore", help="上传提交前缀")
     parser.add_argument("--version-step", type=int, default=2, help="版本号每 N 轮递增一次（建议 2）")
+    parser.add_argument("--tag-on-upload", action="store_true", help="上传时自动创建并推送版本标签（默认关闭）")
+    parser.add_argument("--tag-prefix", default="v", help="标签前缀（例如：v）")
     parser.add_argument("--loop", action="store_true", help="持续循环检测")
     parser.add_argument("--interval-seconds", type=int, default=60, help="循环检查频率")
     args = parser.parse_args()

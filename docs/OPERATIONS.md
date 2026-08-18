@@ -35,12 +35,14 @@ python scripts/maintenance_uploader.py --repo . --set-round 16 --max-round 100
 python scripts/maintenance_uploader.py --repo . --auto-round         # 检测到文件签名变化时自动 +1
 python scripts/maintenance_uploader.py --repo . --auto-round --auto-execute # 到窗口并检测到变更时自动提交
 python scripts/maintenance_uploader.py --repo . --auto-round --auto-execute --version-step 2
+python scripts/maintenance_uploader.py --repo . --auto-round --auto-execute --tag-on-upload --version-step 2
 $loopLog = ".\\.maintenance\\logs\\maintenance_uploader.log"
 .\scripts\maintenance_uploader_scheduler.ps1 -LogPath $loopLog
 .\scripts\maintenance_uploader_schedule_task.ps1 -Mode status
 .\scripts\maintenance_uploader_scheduler.ps1 -LogPath ".\\.maintenance\\logs\\maintenance_uploader.log"
 .\scripts\maintenance_uploader_schedule_task.ps1 -Mode install -AutoRound -AutoExecute
 .\scripts\maintenance_uploader_schedule_task.ps1 -Mode install -AutoRound -AutoExecute -LogPath ".\\.maintenance\\logs\\maintenance_uploader.log"
+.\scripts\maintenance_uploader_schedule_task.ps1 -Mode install -AutoRound -AutoExecute -TagOnUpload -TagPrefix "v"
 .\scripts\maintenance_uploader_schedule_task.ps1 -Mode install -AutoRound -Execute
 .\scripts\maintenance_uploader_schedule_task.ps1 -Mode install -AutoRound -AutoExecute -Execute
 .\scripts\maintenance_uploader_schedule_task.ps1 -Mode install -PythonCmd "python"

@@ -8,6 +8,8 @@ param(
     [switch]$Loop,
     [switch]$AutoRound,
     [switch]$AutoExecute,
+    [switch]$TagOnUpload,
+    [string]$TagPrefix = "v",
     [string]$TaskName = "CodexMaintenanceUploader",
     [string]$PythonCmd = "python",
     [int]$VersionStep = 2,
@@ -17,7 +19,15 @@ param(
 $ErrorActionPreference = "Stop"
 
     function Get-TaskCommand {
-    param([bool]$isExecute, [bool]$withLoop, [bool]$withAutoRound, [bool]$withAutoExecute, [bool]$withVersionStep)
+    param(
+        [bool]$isExecute,
+        [bool]$withLoop,
+        [bool]$withAutoRound,
+        [bool]$withAutoExecute,
+        [bool]$withVersionStep,
+        [bool]$withTagOnUpload,
+        [string]$withTagPrefix
+    )
 
     $schedulerScript = Join-Path $PSScriptRoot "maintenance_uploader_scheduler.ps1"
     if (-not (Test-Path $schedulerScript)) {
@@ -55,6 +65,13 @@ $ErrorActionPreference = "Stop"
     }
     if ($withAutoExecute) {
         $arguments += "-AutoExecute"
+    }
+    if ($withTagOnUpload) {
+        $arguments += "-TagOnUpload"
+    }
+    if (-not [string]::IsNullOrWhiteSpace($withTagPrefix)) {
+        $arguments += "-TagPrefix"
+        $arguments += "`"$withTagPrefix`""
     }
     if ($withVersionStep) {
         $arguments += "-VersionStep"
@@ -95,7 +112,14 @@ function Install-Task {
         throw "任务 ${TaskName} 已存在。请先执行 -Mode uninstall，或更换任务名。"
     }
 
-    $taskCommand = Get-TaskCommand -isExecute $Execute.IsPresent -withLoop $Loop.IsPresent -withAutoRound $AutoRound.IsPresent -withAutoExecute $AutoExecute.IsPresent -withVersionStep ($VersionStep -ne 2)
+    $taskCommand = Get-TaskCommand `
+        -isExecute $Execute.IsPresent `
+        -withLoop $Loop.IsPresent `
+        -withAutoRound $AutoRound.IsPresent `
+        -withAutoExecute $AutoExecute.IsPresent `
+        -withVersionStep ($VersionStep -ne 2) `
+        -withTagOnUpload $TagOnUpload.IsPresent `
+        -withTagPrefix $TagPrefix
     $quotedTaskCommand = '"' + $taskCommand.Replace('"', '\"') + '"'
     Write-Host "正在创建任务计划: $TaskName"
     & schtasks /Create `
