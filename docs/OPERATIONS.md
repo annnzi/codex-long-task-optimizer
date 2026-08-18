@@ -76,6 +76,7 @@ Select-String -Path .\\.maintenance\\logs\\maintenance_uploader.log -Pattern '"m
 .\scripts\maintenance_uploader_scheduler.ps1 -LogPath $loopLog -MaxLogBytes 5242880
 说明：日志超出 5MB 时会自动轮转为 `maintenance_uploader.log.YYYYMMDD_HHMMSS`。
 说明：脚本默认自动加互斥锁，防止计划任务在一分钟内重叠执行；如果你需要自定义锁文件，可加 `-LockPath`。
+说明：`-MaxLockAgeSeconds` 可调节互斥锁最大有效时长（默认 1200 秒）；当检测到过期死锁且 PID 不存在时会自动清理并接管执行，避免调度长期挂起。
 .\scripts\maintenance_uploader_health.ps1 -LogPath ".\\.maintenance\\logs\\maintenance_uploader.log" -TailLines 200
 说明：用于快速统计最近执行状态，判断是否有长时间 `idle`、解析异常或未触发上传情况。
 .\scripts\maintenance_uploader_health.ps1 -LogPath ".\\.maintenance\\logs\\maintenance_uploader.log" -TailLines 400 -AlertNoUploadWindow 8 -AsReport
@@ -85,3 +86,5 @@ Select-String -Path .\\.maintenance\\logs\\maintenance_uploader.log -Pattern '"m
 python .\scripts\maintenance_uploader.py --repo . --advance-round         # 每次优化完成后手工调用，推进轮次
 python .\scripts\maintenance_uploader.py --repo . --set-round 0 --max-round 100 # 复位计数（重置为 1）
 python .\scripts\maintenance_uploader.py --repo .
+
+

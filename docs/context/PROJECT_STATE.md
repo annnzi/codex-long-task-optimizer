@@ -15,6 +15,8 @@
 - 本轮新增：修复 `maintenance_uploader.py` 里 `--set-round 0` 重置语义（重置为 1）与轮次回写时双反引号替换问题，并同步 `docs/OPERATIONS.md` 与 `CHANGELOG.md` 说明。
 - 本轮新增：`maintenance_uploader.py` 增加 `--tag-on-upload` 与 `--tag-prefix`；到窗口提交成功后自动创建并推送 `v<cycle_version>` 标签，提升上传证据闭环。
 - 本轮新增：修复 `maintenance_uploader.py` 的 Python 3.9 兼容性（`str | None` / `Path | None` -> `Optional[...]`），防止定时脚本在 3.9 环境语法报错。
+- 本轮新增：`maintenance_uploader_scheduler.ps1` 增加互斥锁有效期保护（`MaxLockAgeSeconds`），异常中断场景下可自动清理过期锁并接管执行。
+- 本轮新增：`maintenance_uploader_schedule_task.ps1` 透传 `MaxLockAgeSeconds` 到调度器命令，便于任务计划统一配置锁回收策略。
 - 本轮新增：`_extract_sections` 支持中文全角/中文括号数字前缀（如 `1）`、`（2）`）的标签行，并补充解析回归测试。
 - 本轮新增：维护上传器支持项目指纹备份、损坏状态恢复、预览不消耗上传计时，并排除 `.maintenance/` 目录进入 Git 上传。
 - 本轮新增：`--input` 与 `--out` 支持 `~` 用户目录展开，并在输出写入失败时输出可读错误后以状态码 2 退出；新增 `~` 路径输入回归测试。

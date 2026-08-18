@@ -13,12 +13,13 @@ param(
     [string]$TaskName = "CodexMaintenanceUploader",
     [string]$PythonCmd = "python",
     [int]$VersionStep = 2,
-    [string]$LogPath = ""
+    [string]$LogPath = "",
+    [int]$MaxLockAgeSeconds = 20 * 60
 )
 
 $ErrorActionPreference = "Stop"
 
-    function Get-TaskCommand {
+function Get-TaskCommand {
     param(
         [bool]$isExecute,
         [bool]$withLoop,
@@ -77,7 +78,10 @@ $ErrorActionPreference = "Stop"
         $arguments += "-VersionStep"
         $arguments += "`"$VersionStep`""
     }
-
+    if ($MaxLockAgeSeconds -ge 60) {
+        $arguments += "-MaxLockAgeSeconds"
+        $arguments += "`"$MaxLockAgeSeconds`""
+    }
     if (-not [string]::IsNullOrWhiteSpace($LogPath)) {
         $arguments += "-LogPath"
         $arguments += "`"$LogPath`""
@@ -105,7 +109,7 @@ function Install-Task {
         throw "VersionStep 必须 >= 1"
     }
     if ($Loop) {
-        throw "任务计划模式请不要加 -Loop，已内置按分钟调度。若需常驻执行，请直接运行 scripts\maintenance_uploader_scheduler.ps1 -Loop。"
+        throw "任务计划模式请不要加 -Loop，已内置按分钟调度。若需常驻执行，请直接运行 scripts\\maintenance_uploader_scheduler.ps1 -Loop。"
     }
 
     if (Get-TaskExists) {
