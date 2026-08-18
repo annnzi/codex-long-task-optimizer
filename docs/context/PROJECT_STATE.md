@@ -1,6 +1,6 @@
 # PROJECT_STATE（动态状态）
 
-更新时间：2026-08-18 09:17（本地记录）
+更新时间：2026-08-18（当前为简版）本地记录
 
 - 当前版本：`0.1.7`
 - 已记录审计基线：`v0.1.5` 对应 `3ea836bc516884b3337d2de3016561ec7c24059b`（该标签为基线快照，当前 main 在其后继续迭代）。
@@ -8,7 +8,7 @@
 
 ## 当前分支与 HEAD
 - 当前分支：`main`
-- HEAD：`2837725`
+- HEAD：`c415baf`
 - 工作区：无未提交改动（`git status` 为空）
 
 ## 最近代码修改
@@ -60,7 +60,7 @@
 - 本轮新增：`_extract_sections` 兼容“组合前缀”格式（如 `1. [x]`、`2) [ ]`、`+ [x]`）的字段识别，并补充对应回归测试。
 - 本轮新增：`maintenance_uploader.py` 增加 `--auto-round` 自动推进轮次，并透传到 `maintenance_uploader_scheduler.ps1` 与 `maintenance_uploader_schedule_task.ps1`；更新 `docs/OPERATIONS.md` 给出 `-AutoRound` 任务安装示例。
 - 本轮新增：维护上传器步长口径统一为“2 轮一版”（`--version-step`/`VersionStep` 默认改为 `2`），修复 `maintenance_uploader_schedule_task.ps1` 中 `-AutoExecute` 参数拼写问题，并在状态输出中加入 `next_small_upload_due_seconds`/`next_major_upload_due_seconds`，用于周期汇报与日报审计。
-- 本轮新增：手工推进到“16 轮”后状态与文档同步（状态窗口字段与运营记录更新）；本轮优化点已计入 2 轮节奏链路验证（本地未推送）。
+- 本轮新增：已同步本轮状态更新并按节奏提交（状态窗口字段与运营记录更新，已推送到远端）。
 
 ## 当前任务
 - 目标：继续做小步优化，降低字段识别误分类概率，持续压低真实工程接入误伤风险，并把 100 轮窗口 + 25min/2h 上传机制固化为可持续运行脚本链路。
@@ -78,7 +78,7 @@
 - CI 目标仍是：`python -m pip install -e .`、CLI smoke check、`pytest`。
 
 ## 最新运行和部署结果
-- 最近一次已推送提交：`2837725`（tag: `v0.1.7`）
+- 最近一次已推送提交：`c415baf`
 - 当前轮次已推送：`4adb8c3`（未新增 Tag）。
 - 已执行优化点：  
   - `src/long_task_optimizer.py`：修复 `complexity` 计算口径为词数并更正 md 输出标签；新增 `--status` 支持。  
