@@ -53,6 +53,8 @@ python -m venv .venv
 # source .venv/bin/activate
 
 python -m pip install -e .
+task-optimizer --text "目标：验证首次启动" --format md
+codex-long-task-optimizer --text "目标：验证首次启动" --format md
 python -m src.long_task_optimizer --input examples/sample-task.txt --format md
 ```
 
@@ -60,18 +62,25 @@ python -m src.long_task_optimizer --input examples/sample-task.txt --format md
 
 ```bash
 python -m src.long_task_optimizer --input examples/sample-task.txt --format md
+python -m src.long_task_optimizer --text "目标：发布一个长任务版本" --format json
 ```
 
 ## 你只需要记住的几条 / Quick options
 
 - `--input`：任务文本路径，默认 `examples/sample-task.txt`  
   `--input`: task text file, default `examples/sample-task.txt`
+- `--text`：直接传入任务文本（优先级高于 `--input`）  
+  `--text`: pass raw task text directly (takes priority over `--input`).
+- `--input -`：从标准输入读取任务文本（可用于 pipeline）  
+  `--input -`: read task text from stdin (pipeline input supported).
 - `--max-tokens`：单阶段预算，默认 `120`  
   `--max-tokens`: budget per phase, default `120`
 - `--format`：`md`（默认）或 `json`  
   `--format`: `md` (default) or `json`
-- `--no-risk`：隐藏风险段  
-  `--no-risk`: hide risk and rollback section
+- `--no-risk`：隐藏风险提示（保留回退段；Markdown 下不显示风险小节和风险项）  
+  `--no-risk`: hide risk notes, keep rollback section; markdown output omits risk sections
+- `--status`：输出版本与运行环境摘要（`version/app/python/generated_at`）  
+  `--status`: output status summary (`version/app/python/generated_at`)
 - `--out`：生成文件  
   `--out`: output to file
 - `--version`：看版本  
@@ -96,8 +105,12 @@ Expected output signals:
 
 ## 一键命令清单 / One-command list
 
+- `task-optimizer --format md`
+- `agentic-task-optimizer --format md`
 - `python -m src.long_task_optimizer --format md`
 - `python -m src.long_task_optimizer --format json`
+- `python -m src.long_task_optimizer --text "目标：发布一个长任务拆解计划" --format json`
+- `codex-long-task-optimizer --text "目标：发布一个长任务拆解计划" --format json`
 - `python -m src.long_task_optimizer --out reports/plan.md --format md`
 - `python -m src.long_task_optimizer --max-tokens 180 --no-risk`
 - `python -m pytest -q`
@@ -130,11 +143,29 @@ Expected output signals:
 
 ```json
 {
-  "phases": 1,
-  "items": [
+  "generated_at": "2026-08-17T16:00:00Z",
+  "complexity": 29,
+  "summary": "完成一个长任务拆解工具的迭代发布",
+  "constraints": ["不引入第三方依赖"],
+  "acceptance_targets": ["每个阶段可直接执行，并能用于 PR 说明"],
+  "checkpoints": [
     {
-      "phase": 1,
-      "deliverables": ["梳理目标与边界", "生成首轮验收清单"]
+      "title": "阶段 1：澄清边界",
+      "work": [
+        "完成：完成一个长任务拆解工具的迭代发布；范围：支持3个阶段输出和一个回退点；交付：输出包含验收标准的 Markdown 报告",
+        "产出：阶段性结果文件或验证截图",
+        "检查：确认前置条件与依赖可满足"
+      ],
+      "acceptance": [
+        "本阶段输出可独立验证",
+        "无阻塞性高风险变更（如可回避则延后）"
+      ],
+      "rollback": "将本阶段变更回退到上一次可验证提交",
+      "risks": [
+        "需求边界不完整导致返工",
+        "外部依赖文档不足导致时间偏差"
+      ],
+      "est_tokens": 17
     }
   ]
 }
@@ -161,3 +192,6 @@ Expected output signals:
 - 提 Issue / Report issues: `https://github.com/annnzi/codex-long-task-optimizer/issues`
 - 贡献说明 / Contributing guide: [CONTRIBUTING.md](CONTRIBUTING.md)
 - 许可证 / License: MIT, [LICENSE](LICENSE)
+
+
+

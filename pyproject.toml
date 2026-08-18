@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "codex-long-task-optimizer"
-version = "0.1.5"
+version = "0.1.7"
 description = "Task optimizer for long tasks (Agentic & Codex workflows). Generate actionable checkpoints from long tasks for Codex-style execution."
 readme = "README.md"
 requires-python = ">=3.9"
@@ -19,9 +19,18 @@ classifiers = [
 
 [project.scripts]
 codex-long-task-optimizer = "src.long_task_optimizer:main"
+agentic-task-optimizer = "src.long_task_optimizer:main"
+task-optimizer = "src.long_task_optimizer:main"
 
 [project.urls]
 Homepage = "https://github.com/annnzi/codex-long-task-optimizer"
 Repository = "https://github.com/annnzi/codex-long-task-optimizer"
 Issues = "https://github.com/annnzi/codex-long-task-optimizer/issues"
 Changelog = "https://github.com/annnzi/codex-long-task-optimizer/blob/main/CHANGELOG.md"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src", "src.*"]

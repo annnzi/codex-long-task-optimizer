@@ -19,5 +19,16 @@ jobs:
         run: python -m pip install -e .
       - name: Smoke check
         run: python -m src.long_task_optimizer --input examples/sample-task.txt --format json
+      - name: Smoke check with stdin
+        run: printf '目标：CI 验证\n验收：可执行结果可追踪' | python -m src.long_task_optimizer --input - --format json
+      - name: Smoke check with --text
+        run: python -m src.long_task_optimizer --text "目标：CI 验证\n验收：稳定输出" --format json
+      - name: Smoke check status
+        run: python -m src.long_task_optimizer --status
+      - name: Verify console script
+        run: |
+          task-optimizer --text "目标：CLI 新入口可调用性\n验收：别名脚本可执行" --format json
+          codex-long-task-optimizer --text "目标：CLI 脚本可调用性\n验收：可执行" --format json
+          codex-long-task-optimizer --status
       - name: Run tests
         run: python -m pytest -q

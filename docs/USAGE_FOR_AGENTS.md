@@ -6,13 +6,19 @@
 ## 推荐调用方式 / Recommended call pattern
 - 若你有任务文本文件：  
   `python -m src.long_task_optimizer --input <file> --format md`
-- 若你有原始文本字符串：请先写入临时文件再调用，或在上游框架中封装 `task_text` 为文件。
+- 若你想用更大众的入口脚本：  
+  `task-optimizer --text "<任务文本>" --format md`
+- 若你有原始文本字符串：直接使用 `--text "..."`。
+- 若你在 pipeline/脚本里：使用 `--input -` 从标准输入读取。
 
 ## 标准参数 / Standard params
 - `--input <path>`：任务输入文件路径（默认 `examples/sample-task.txt`）
+- `--text <text>`：直接输入任务文本，优先于 `--input`
+- `--input -`：从标准输入读取任务文本
 - `--max-tokens <int>`：阶段上限，默认 `120`
 - `--format <md|json>`
-- `--no-risk`：关闭风险/回退段
+- `--no-risk`：关闭风险提示（保留回退段；Markdown 输出不显示风险点小节与风险项）
+- `--status`：输出 `app/version/python/generated_at` 状态快照
 - `--out <path>`：写入文件
 - `--version`：查看版本
 
@@ -24,7 +30,12 @@
   - 回退方式
   - 风险提示
 - JSON 模式：
-  - `tasks` / `phases` / `acceptance` / `rollback` / `risks`
+  - `generated_at`：生成时间
+  - `complexity`：复杂度评分（0-100）
+  - `summary`：目标摘要
+  - `constraints`：约束数组
+  - `acceptance_targets`：验收目标数组
+  - `checkpoints`：阶段列表（title/work/acceptance/rollback/risks/est_tokens）
 
 ## 兼容性 / Compatibility
 - Python 3.9+，无重依赖

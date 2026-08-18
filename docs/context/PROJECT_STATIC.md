@@ -40,6 +40,8 @@
   - 来源：`src/long_task_optimizer.py`
 - 项目元数据在 `pyproject.toml` 中声明 Python 最低版本 3.9+、开源协议、脚本入口。  
   - 来源：`pyproject.toml`
+- 对外发布入口支持三种脚本别名：`task-optimizer`（推荐）、`agentic-task-optimizer`、`codex-long-task-optimizer`（兼容历史）。  
+  - 来源：`pyproject.toml`
 - CI 默认在 Python 3.11 下执行 smoke check 与 `pytest`。  
   - 来源：`.github/workflows/ci.yml`
 
