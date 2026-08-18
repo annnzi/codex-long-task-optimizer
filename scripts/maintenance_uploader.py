@@ -32,8 +32,12 @@ import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
 
-ROUND_COUNTER_LABEL_PATTERN = re.compile(r"(当前窗口计数\s*[:：]?\s*)`?\d+\s*/\s*\d+\s*`?")
-ROUND_COUNT_VALUE_PATTERN = re.compile(r"当前窗口计数\s*[:：]?\s*[`\"“”']?\s*(\d+)\s*/\s*(\d+)\s*[`\"“”']?")
+ROUND_COUNTER_LABEL_PATTERN = re.compile(
+    r"((?:当前窗口计数|窗口计数)\s*[:：]?\s*)`?\s*\d+\s*/\s*\d+\s*`?"
+)
+ROUND_COUNT_VALUE_PATTERN = re.compile(
+    r"(?:当前窗口计数|窗口计数)\s*[:：]?\s*[`\"“”']?\s*(\d+)\s*/\s*(\d+)\s*[`\"“”']?"
+)
 
 
 def _normalise_int(value: object, default: int) -> int:
@@ -53,7 +57,10 @@ def _parse_round_count(state_path: Path) -> tuple[int, int]:
     text = state_path.read_text(encoding="utf-8")
     match = ROUND_COUNT_VALUE_PATTERN.search(text)
     if match is None:
-        raise ValueError("无法从 docs/context/PROJECT_STATE.md 解析轮次")
+        fallback = re.search(r"(?:窗口计数|round)\s*[:：]?\s*[`\"“”']?\s*(\d+)\s*/\s*(\d+)\s*[`\"“”']?", text, re.IGNORECASE)
+        if fallback is None:
+            raise ValueError("无法从 docs/context/PROJECT_STATE.md 解析轮次")
+        match = fallback
     round_count = int(match.group(1))
     max_round = int(match.group(2))
     if max_round <= 0:

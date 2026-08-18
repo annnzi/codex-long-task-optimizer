@@ -8,8 +8,8 @@
 
 ## 当前分支与 HEAD
 - 当前分支：`main`
-- HEAD：`8ce9974`
-- 工作区：有未提交改动（请以 `git status` 为准）
+- HEAD：`2837725`
+- 工作区：无未提交改动（`git status` 为空）
 
 ## 最近代码修改
 - 本轮新增：修复 `maintenance_uploader.py` 里 `--set-round 0` 重置语义（重置为 1）与轮次回写时双反引号替换问题，并同步 `docs/OPERATIONS.md` 与 `CHANGELOG.md` 说明。
@@ -77,7 +77,7 @@
 - CI 目标仍是：`python -m pip install -e .`、CLI smoke check、`pytest`。
 
 ## 最新运行和部署结果
-- 最近一次已推送提交：`8ce9974`
+- 最近一次已推送提交：`2837725`（tag: `v0.1.7`）
 - 本轮当前仍未推送（按本地连续优化后再同步）。
 - 已执行优化点：  
   - `src/long_task_optimizer.py`：修复 `complexity` 计算口径为词数并更正 md 输出标签；新增 `--status` 支持。  
