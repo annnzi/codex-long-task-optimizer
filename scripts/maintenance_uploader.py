@@ -25,10 +25,12 @@ Usage examples:
 from __future__ import annotations
 
 import argparse
+import csv
 import hashlib
 import json
 import re
 import subprocess
+import sys
 import time
 import zipfile
 from datetime import datetime, timezone
@@ -48,6 +50,20 @@ def _normalise_int(value: object, default: int) -> int:
         return int(value)
     except (TypeError, ValueError):
         return default
+
+
+def _configure_utf8_stdio() -> None:
+    """让 Windows 定时任务日志稳定输出 UTF-8，避免中文状态乱码。"""
+    if sys.platform != "win32":
+        return
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is None:
+            continue
+        try:
+            reconfigure(encoding="utf-8", errors="replace")
+        except (OSError, ValueError):
+            pass
 
 
 def _window_due_seconds(state: dict, key: str, interval_seconds: int, *, now_ts: float) -> int:
@@ -94,18 +110,16 @@ def _derive_cycle_version(
     round_count: int,
     *,
     version_step: int,
+    cycles_completed: int,
+    max_round: int,
 ) -> str:
     version_match = re.fullmatch(r"(\d+)\.(\d+)\.(\d+)", base_version.strip())
     if not version_match:
         return f"{base_version}-r{round_count}"
+    # 项目版本已经由 pyproject.toml / src.__version__ 统一维护。
+    # 轮次只决定上传窗口，不能再次叠加版本号，否则 v0.1.8 会被错误显示为 v0.1.16。
     major, minor, patch = [int(x) for x in version_match.groups()]
-    if version_step <= 0:
-        version_step = 1
-    if round_count <= 0:
-        return f"{major}.{minor}.{patch}"
-    # 每 N 轮递增一次；例如 version_step=2 时，第 2/4/6... 轮递增一版。
-    increment = round_count // version_step
-    return f"{major}.{minor}.{patch + increment}"
+    return f"{major}.{minor}.{patch}"
 
 
 def _state_file(path: Path) -> Path:
@@ -117,8 +131,12 @@ def _default_uploader_state() -> dict:
         "last_backup_ts": 0,
         "last_backup_signature": "",
         "last_round_count": {"value": 0, "max": 100, "updated_at": 0, "source": "bootstrap"},
+        "cycles_completed": 0,
+        "last_cycle_boundary_round": 0,
+        "last_cycle_boundary_ts": 0,
         "last_small_upload": {"ts": 0, "round": 0},
         "last_major_upload": {"ts": 0, "round": 0},
+        "pending_tag": "",
     }
 
 
@@ -158,16 +176,42 @@ def _load_uploader_state(path: Path) -> dict:
     except (TypeError, ValueError):
         pass
     state["last_backup_signature"] = str(payload.get("last_backup_signature", ""))
+    state["cycles_completed"] = _normalise_int(payload.get("cycles_completed"), 0)
+    state["last_cycle_boundary_round"] = _normalise_int(
+        payload.get("last_cycle_boundary_round"),
+        0,
+    )
+    try:
+        state["last_cycle_boundary_ts"] = float(payload.get("last_cycle_boundary_ts", 0))
+    except (TypeError, ValueError):
+        state["last_cycle_boundary_ts"] = 0
     state["last_round_count"] = _normalise_round_slot(payload.get("last_round_count"))
     state["last_small_upload"] = _normalise_upload_slot(payload.get("last_small_upload"))
     state["last_major_upload"] = _normalise_upload_slot(payload.get("last_major_upload"))
+    state["pending_tag"] = str(payload.get("pending_tag", "")).strip()
     return state
+
+
+def _atomic_write_text(path: Path, content: str) -> None:
+    temp_path = path.with_name(f"{path.name}.tmp")
+    try:
+        temp_path.write_text(content, encoding="utf-8")
+        temp_path.replace(path)
+    except Exception:
+        try:
+            temp_path.unlink()
+        except OSError:
+            pass
+        raise
 
 
 def _save_uploader_state(path: Path, state: dict) -> None:
     payload_path = _state_file(path)
     payload_path.parent.mkdir(parents=True, exist_ok=True)
-    payload_path.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
+    _atomic_write_text(
+        payload_path,
+        json.dumps(state, ensure_ascii=False, indent=2),
+    )
 
 
 def _classify_upload_type(round_count: int) -> str:
@@ -178,24 +222,94 @@ def _classify_upload_type(round_count: int) -> str:
     return "idle"
 
 
-def _create_backup(repo_dir: Path) -> Path:
+def _create_backup(
+    repo_dir: Path,
+    marker: Optional[str] = None,
+    project_signature: Optional[str] = None,
+) -> Path:
     now = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
     backup_dir = repo_dir / ".maintenance" / "backups"
     backup_dir.mkdir(parents=True, exist_ok=True)
-    backup_file = backup_dir / f"backup-{now}.zip"
+    suffix = ""
+    if marker:
+        safe_marker = re.sub(r"[^0-9A-Za-z._-]+", "-", marker.strip())
+        safe_marker = safe_marker.strip(".-")
+        if safe_marker:
+            suffix = f"_{safe_marker}"
+    backup_file = backup_dir / f"backup-{now}{suffix}.zip"
 
-    exclude = {".git", ".maintenance", "__pycache__", ".venv", ".pytest_cache"}
-    with zipfile.ZipFile(backup_file, "w", compression=zipfile.ZIP_DEFLATED) as zf:
-        for item in sorted(repo_dir.rglob("*")):
-            if not item.is_file():
-                continue
-            rel = item.relative_to(repo_dir)
-            if any(part in exclude for part in rel.parts):
-                continue
-            if rel.suffix == ".pyc":
-                continue
-            zf.write(item, rel.as_posix())
+    exclude = {
+        ".git",
+        ".maintenance",
+        "__pycache__",
+        ".venv",
+        ".pytest_cache",
+        ".mypy_cache",
+        ".ruff_cache",
+        ".tox",
+        ".venv311",
+        ".idea",
+        ".vscode",
+        "node_modules",
+    }
+    temp_backup_file = backup_file.with_name(f"{backup_file.name}.tmp")
+    try:
+        with zipfile.ZipFile(temp_backup_file, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+            file_count = 0
+            for item in sorted(repo_dir.rglob("*")):
+                if not item.is_file():
+                    continue
+                rel = item.relative_to(repo_dir)
+                if any(part in exclude for part in rel.parts):
+                    continue
+                if rel.suffix == ".pyc":
+                    continue
+                zf.write(item, rel.as_posix())
+                file_count += 1
+            zf.writestr(
+                "backup-manifest.json",
+                json.dumps(
+                    {
+                        "format": 1,
+                        "created_at": now,
+                        "marker": marker or "",
+                        "repository": repo_dir.name,
+                        "project_signature": project_signature or "",
+                        "file_count": file_count,
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
+            )
+        temp_backup_file.replace(backup_file)
+    except Exception:
+        try:
+            temp_backup_file.unlink()
+        except OSError:
+            pass
+        raise
     return backup_file
+
+
+def _prune_backups(backup_dir: Path, max_backups: int) -> int:
+    if max_backups <= 0:
+        return 0
+    if not backup_dir.exists():
+        return 0
+
+    files = [item for item in backup_dir.glob("backup-*.zip") if item.is_file()]
+    if len(files) <= max_backups:
+        return 0
+
+    files.sort(key=lambda item: item.stat().st_mtime)
+    removed = 0
+    for stale in files[:-max_backups]:
+        try:
+            stale.unlink()
+            removed += 1
+        except OSError:
+            pass
+    return removed
 
 
 def _project_signature(repo_dir: Path) -> str:
@@ -237,8 +351,107 @@ def _git_has_changes(repo_dir: Path) -> bool:
     return bool(_git_project_status(repo_dir).strip())
 
 
+def _git_has_unpushed_commits(repo_dir: Path) -> bool:
+    try:
+        status = subprocess.check_output(
+            ["git", "status", "--porcelain=v2", "--branch"],
+            cwd=repo_dir,
+            text=True,
+        )
+    except subprocess.CalledProcessError:
+        return False
+    for line in status.splitlines():
+        if not line.startswith("# branch.ab "):
+            continue
+        parts = line.split()
+        if len(parts) < 4:
+            return False
+        try:
+            return int(parts[2]) > 0
+        except ValueError:
+            return False
+    return False
+
+
+def _is_sensitive_path(path: str) -> bool:
+    name = path.replace("\\", "/").rsplit("/", 1)[-1].lower()
+    if name == ".env" or (name.startswith(".env.") and not name.endswith((".example", ".sample", ".template"))):
+        return True
+    if name in {
+        "id_rsa",
+        "id_ed25519",
+        "credentials.json",
+        "service-account.json",
+        "secrets.json",
+        "auth.json",
+        "token.json",
+    }:
+        return True
+    return name.endswith((".pem", ".key", ".p12", ".pfx", ".crt"))
+
+
+def _git_sensitive_paths(repo_dir: Path) -> list[str]:
+    paths = set()
+    for line in _git_project_status(repo_dir).splitlines():
+        candidate = line[3:].strip() if len(line) > 3 else ""
+        for path in candidate.split(" -> "):
+            if path and _is_sensitive_path(path):
+                paths.add(path)
+    return sorted(paths)
+
+
 def _run_cmd(cmd: list[str], repo_dir: Path) -> None:
     subprocess.run(cmd, cwd=repo_dir, check=True)
+
+
+def _append_status_audit(path: str, status: dict) -> None:
+    if not path:
+        return
+    audit_path = Path(path).expanduser()
+    audit_path.parent.mkdir(parents=True, exist_ok=True)
+    header = [
+        "ts",
+        "round",
+        "mode",
+        "uploaded",
+        "backup_done",
+        "pruned_backups",
+        "round_action",
+        "state_source",
+        "project_version",
+        "cycle_version",
+        "cycles_completed",
+        "round_cycle_completed",
+        "cycle_boundary_round",
+        "cycle_boundary_ts",
+        "version_step",
+        "next_small_upload_due_seconds",
+        "next_major_upload_due_seconds",
+        "backup_file",
+        "cycle_tag",
+        "parse_error",
+        "message",
+    ]
+    exists = audit_path.exists()
+    with audit_path.open("a", encoding="utf-8", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=header)
+        if not exists:
+            writer.writeheader()
+        row = {key: status.get(key, "") for key in header}
+        for bool_key in ("uploaded", "backup_done", "round_cycle_completed"):
+            row[bool_key] = bool(row.get(bool_key))
+        writer.writerow(row)
+
+
+def _next_loop_sleep(status: dict, default_interval: int) -> int:
+    if status.get("mode") == "error":
+        return max(10, default_interval)
+    due_small = _normalise_int(status.get("next_small_upload_due_seconds", 0), 0)
+    due_major = _normalise_int(status.get("next_major_upload_due_seconds", 0), 0)
+    candidates = [value for value in (due_small, due_major) if value > 0]
+    if not candidates:
+        return max(1, default_interval)
+    return max(60, min(candidates))
 
 
 def _push_tags(repo_dir: Path) -> None:
@@ -250,8 +463,14 @@ def _tag_round_upload(
     cycle_version: str,
     *,
     tag_prefix: str = "v",
+    state: Optional[dict] = None,
 ) -> Optional[str]:
     tag_name = f"{tag_prefix}{cycle_version}"
+    if state is not None and state.get("pending_tag") == tag_name:
+        _push_tags(repo_dir)
+        state["pending_tag"] = ""
+        _save_uploader_state(repo_dir, state)
+        return tag_name
     try:
         _run_cmd(["git", "rev-parse", "--verify", tag_name], repo_dir)
         return None
@@ -268,7 +487,13 @@ def _tag_round_upload(
         ],
         repo_dir,
     )
+    if state is not None:
+        state["pending_tag"] = tag_name
+        _save_uploader_state(repo_dir, state)
     _push_tags(repo_dir)
+    if state is not None:
+        state["pending_tag"] = ""
+        _save_uploader_state(repo_dir, state)
     return tag_name
 
 
@@ -297,12 +522,63 @@ def _upload_if_due(
             "",
         )
 
-    if not _git_has_changes(repo_dir):
+    pending_tag = str(state.get("pending_tag", "")).strip()
+    if pending_tag and args.tag_on_upload:
+        if not args.execute:
+            return (
+                False,
+                f"检测到待推送标签 {pending_tag}，建议执行：python scripts/maintenance_uploader.py --execute --tag-on-upload",
+                mode,
+                pending_tag,
+            )
+        _push_tags(repo_dir)
+        state["pending_tag"] = ""
+        state[key] = {"ts": now_ts, "round": round_count}
+        _save_uploader_state(repo_dir, state)
+        return True, f"{mode} 标签推送重试已执行：{pending_tag}", mode, pending_tag
+
+    has_changes = _git_has_changes(repo_dir)
+    has_unpushed_commits = _git_has_unpushed_commits(repo_dir)
+    if not has_changes and has_unpushed_commits:
+        if not args.execute:
+            return (
+                False,
+                f"检测到本地已有未推送提交，建议执行：python scripts/maintenance_uploader.py --execute",
+                mode,
+                "",
+            )
+        _run_cmd(["git", "push"], repo_dir)
+        uploaded_tag = ""
+        if args.tag_on_upload:
+            uploaded_tag = _tag_round_upload(
+                repo_dir,
+                cycle_version,
+                tag_prefix=args.tag_prefix,
+                state=state,
+            )
+        state[key] = {"ts": now_ts, "round": round_count}
+        _save_uploader_state(repo_dir, state)
+        message = f"{mode} 上传重试已执行：已推送本地未推送提交"
+        if uploaded_tag:
+            message += f"，已创建标签 {uploaded_tag}"
+        return True, message, mode, uploaded_tag
+
+    if not has_changes:
         state[key]["ts"] = now_ts
         _save_uploader_state(repo_dir, state)
         return False, f"无代码变更，跳过 {mode} 上传", mode, ""
 
     if args.execute:
+        sensitive_paths = _git_sensitive_paths(repo_dir)
+        if sensitive_paths and not getattr(args, "allow_sensitive", False):
+            return (
+                False,
+                "检测到可能的敏感文件，已阻止自动上传："
+                + ", ".join(sensitive_paths)
+                + "；如确认安全，请显式使用 --allow-sensitive",
+                mode,
+                "",
+            )
         _run_cmd(
             [
                 "git",
@@ -324,6 +600,7 @@ def _upload_if_due(
                 repo_dir,
                 cycle_version,
                 tag_prefix=args.tag_prefix,
+                state=state,
             )
         state[key] = {"ts": now_ts, "round": round_count}
         _save_uploader_state(repo_dir, state)
@@ -372,7 +649,7 @@ def _sync_round_to_state_file(state_path: Path, round_count: int, max_round: int
         raise ValueError("未找到可更新的轮次行（docs/context/PROJECT_STATE.md）")
     if new_text == text:
         raise ValueError("轮次更新未发生变化（docs/context/PROJECT_STATE.md）")
-    state_path.write_text(new_text, encoding="utf-8")
+    _atomic_write_text(state_path, new_text)
 
 
 def _set_round_count(
@@ -413,15 +690,32 @@ def _set_round_count(
     return normalized, max_round, ""
 
 
-def _advance_round_count(repo_dir: Path, state_path: Path, upload_state: dict) -> tuple[int, int, str]:
+def _advance_round_count(
+    repo_dir: Path,
+    state_path: Path,
+    upload_state: dict,
+) -> tuple[int, int, str, bool]:
     slot = _normalise_round_slot(upload_state.get("last_round_count"))
     max_round = slot.get("max", 100)
     current = slot.get("value", 0)
     next_round = current + 1 if current < max_round else 1
-    return _set_round_count(repo_dir, state_path, upload_state, value=next_round, max_round=max_round)
+    cycle_completed = current >= max_round and current > 0
+    round_count, max_round, parse_error = _set_round_count(
+        repo_dir,
+        state_path,
+        upload_state,
+        value=next_round,
+        max_round=max_round,
+    )
+    if cycle_completed and not parse_error:
+        upload_state["cycles_completed"] = int(upload_state.get("cycles_completed", 0)) + 1
+        upload_state["last_cycle_boundary_round"] = current
+        upload_state["last_cycle_boundary_ts"] = time.time()
+        _save_uploader_state(repo_dir, upload_state)
+    return round_count, max_round, parse_error, cycle_completed
 
 
-def _run_once(repo_dir: Path, state_file: Path, args: argparse.Namespace) -> None:
+def _run_once(repo_dir: Path, state_file: Path, args: argparse.Namespace) -> dict:
     upload_state = _load_uploader_state(repo_dir)
     base_version = _read_project_version(repo_dir)
 
@@ -430,8 +724,15 @@ def _run_once(repo_dir: Path, state_file: Path, args: argparse.Namespace) -> Non
 
     max_round = args.max_round
     round_action = ""
+    round_cycle_completed = False
+    cycle_boundary_round = int(upload_state.get("last_cycle_boundary_round", 0))
+    cycle_boundary_ts = float(upload_state.get("last_cycle_boundary_ts", 0))
     if args.advance_round:
-        round_count, max_round, parse_error = _advance_round_count(repo_dir, state_file, upload_state)
+        round_count, max_round, parse_error, round_cycle_completed = _advance_round_count(
+            repo_dir,
+            state_file,
+            upload_state,
+        )
         round_action = "advance"
         round_source = "cli"
     elif args.set_round is not None:
@@ -478,33 +779,48 @@ def _run_once(repo_dir: Path, state_file: Path, args: argparse.Namespace) -> Non
     now_ts = time.time()
     signature = _project_signature(repo_dir)
     upload_state_for_backup = _load_uploader_state(repo_dir)
-    backup_path: Optional[Path]
-    if signature != upload_state_for_backup.get("last_backup_signature", ""):
-        backup_path = _create_backup(repo_dir)
-        upload_state_for_backup["last_backup_ts"] = now_ts
-        upload_state_for_backup["last_backup_signature"] = signature
-        _save_uploader_state(repo_dir, upload_state_for_backup)
-    else:
-        backup_path = None
+    has_new_signature = signature != upload_state_for_backup.get("last_backup_signature", "")
+    if args.auto_round and round_action == "" and round_source != "parse_failed" and has_new_signature:
+        auto_round_count, auto_max_round, round_auto_error, auto_cycle_completed = _advance_round_count(
+            repo_dir,
+            state_file,
+            upload_state,
+        )
+        round_count = auto_round_count
+        max_round = auto_max_round
+        if auto_cycle_completed:
+            round_cycle_completed = True
+        round_action = "auto"
+        if round_auto_error:
+            parse_error = f"{parse_error}; auto-round 失败：{round_auto_error}" if parse_error else f"auto-round 失败：{round_auto_error}"
 
-    if args.auto_round and round_action == "" and round_source != "parse_failed":
-        if backup_path is not None:
-            auto_round_count, auto_max_round, round_auto_error = _advance_round_count(
-                repo_dir,
-                state_file,
-                upload_state,
-            )
-            round_count = auto_round_count
-            max_round = auto_max_round
-            round_action = "auto"
-            if round_auto_error:
-                parse_error = f"{parse_error}; auto-round 失败：{round_auto_error}" if parse_error else f"auto-round 失败：{round_auto_error}"
+    cycle_boundary_round = int(upload_state.get("last_cycle_boundary_round", 0))
+    cycle_boundary_ts = float(upload_state.get("last_cycle_boundary_ts", 0))
 
     cycle_version = _derive_cycle_version(
         base_version=base_version,
         round_count=round_count,
         version_step=args.version_step,
+        cycles_completed=int(upload_state.get("cycles_completed", 0)),
+        max_round=max_round,
     )
+    backup_path: Optional[Path]
+    pruned_backups = 0
+    if has_new_signature:
+        backup_path = _create_backup(
+            repo_dir,
+            marker=f"r{round_count}-v{cycle_version}",
+            project_signature=signature,
+        )
+        pruned_backups = _prune_backups(
+            backup_path.parent,
+            args.max_backups,
+        )
+        upload_state_for_backup["last_backup_ts"] = now_ts
+        upload_state_for_backup["last_backup_signature"] = signature
+        _save_uploader_state(repo_dir, upload_state_for_backup)
+    else:
+        backup_path = None
 
     if round_source == "parse_failed":
         uploaded_tag = ""
@@ -524,6 +840,10 @@ def _run_once(repo_dir: Path, state_file: Path, args: argparse.Namespace) -> Non
             upload_args,
             cycle_version,
         )
+        if round_cycle_completed:
+            message = (
+                f"{message}（已完成 1 个 {max_round} 轮周期，累计 {upload_state.get('cycles_completed', 0)}）"
+            )
 
     post_upload_state = _load_uploader_state(repo_dir)
     if round_source != "parse_failed":
@@ -550,6 +870,10 @@ def _run_once(repo_dir: Path, state_file: Path, args: argparse.Namespace) -> Non
         "mode": mode,
         "project_version": base_version,
         "cycle_version": cycle_version,
+        "cycles_completed": upload_state.get("cycles_completed", 0),
+        "round_cycle_completed": round_cycle_completed,
+        "cycle_boundary_round": cycle_boundary_round,
+        "cycle_boundary_ts": cycle_boundary_ts,
         "version_step": args.version_step,
         "cycle_tag": uploaded_tag if uploaded else "",
         "backup_done": bool(backup_path),
@@ -559,6 +883,8 @@ def _run_once(repo_dir: Path, state_file: Path, args: argparse.Namespace) -> Non
         "state_source": round_source if round_action == "" else f"cli:{round_action}",
         "next_small_upload_due_seconds": next_small_due,
         "next_major_upload_due_seconds": next_major_due,
+        "backup_file": str(backup_path) if backup_path else "",
+        "pruned_backups": pruned_backups,
     }
     if parse_error:
         status["parse_error"] = parse_error
@@ -568,13 +894,22 @@ def _run_once(repo_dir: Path, state_file: Path, args: argparse.Namespace) -> Non
     print(f"轮次：{round_count}")
     print(f"版本：{cycle_version}")
     print(f"备份：{backup_path or '项目文件无变化，跳过重复备份'}")
+    if pruned_backups > 0:
+        print(f"备份清理：保留上限 {args.max_backups}，本次移除 {pruned_backups} 个旧备份")
     print(f"上传状态：{message}")
+    print(f"status: {json.dumps(status, ensure_ascii=False)}")
     print(f"状态：{json.dumps(status, ensure_ascii=False)}")
     if uploaded:
         print("已按节奏完成自动上传。")
 
+    if args.audit_csv:
+        _append_status_audit(args.audit_csv, status)
+
+    return status
+
 
 def main() -> None:
+    _configure_utf8_stdio()
     parser = argparse.ArgumentParser(description="按节奏执行项目备份与上传")
     parser.add_argument("--repo", default=".", help="仓库根目录")
     parser.add_argument("--state-file", default="docs/context/PROJECT_STATE.md", help="动态状态文件")
@@ -586,18 +921,24 @@ def main() -> None:
     parser.add_argument("--auto-round", action="store_true", help="检测到项目变更时自动推进轮次")
     parser.add_argument("--auto-execute", action="store_true", help="到达窗口且满足上传条件时自动执行 git add/commit/push")
     parser.add_argument("--execute", action="store_true", help="允许执行 git add/commit/push（默认仅输出建议）")
+    parser.add_argument("--allow-sensitive", action="store_true", help="允许上传高风险文件（默认阻止）")
     parser.add_argument("--commit-prefix", default="chore", help="上传提交前缀")
     parser.add_argument("--version-step", type=int, default=2, help="版本号每 N 轮递增一次（建议 2）")
     parser.add_argument("--tag-on-upload", action="store_true", help="上传时自动创建并推送版本标签（默认关闭）")
     parser.add_argument("--tag-prefix", default="v", help="标签前缀（例如：v）")
     parser.add_argument("--loop", action="store_true", help="持续循环检测")
-    parser.add_argument("--interval-seconds", type=int, default=60, help="循环检查频率")
+    parser.add_argument("--adaptive-loop", action="store_true", help="按窗口到期自动调整循环间隔")
+    parser.add_argument("--interval-seconds", type=int, default=60, help="循环检查频率（自适应关闭时生效）")
+    parser.add_argument("--max-backups", type=int, default=10, help="仅保留最近 N 个备份（默认 10）")
+    parser.add_argument("--audit-csv", default="", help="每次执行将状态追加到 CSV（用于持续审计）")
     args = parser.parse_args()
 
     if args.max_round <= 0:
         raise SystemExit("--max-round 必须是大于 0 的整数")
     if args.version_step <= 0:
         raise SystemExit("--version-step 必须是大于 0 的整数")
+    if args.max_backups <= 0:
+        raise SystemExit("--max-backups 必须是大于 0 的整数")
 
     repo_dir = Path(args.repo).resolve()
     state_path = (repo_dir / args.state_file).resolve()
@@ -607,8 +948,11 @@ def main() -> None:
 
     if args.loop:
         while True:
-            _run_once(repo_dir, state_path, args)
-            time.sleep(max(1, args.interval_seconds))
+            status = _run_once(repo_dir, state_path, args)
+            wait_seconds = args.interval_seconds
+            if args.adaptive_loop:
+                wait_seconds = _next_loop_sleep(status, args.interval_seconds)
+            time.sleep(max(1, wait_seconds))
     else:
         _run_once(repo_dir, state_path, args)
 

@@ -51,6 +51,36 @@ Get-Content .\\.maintenance\\logs\\maintenance_uploader.log -Tail 80
 Select-String -Path .\\.maintenance\\logs\\maintenance_uploader.log -Pattern '"uploaded":' | Select-Object -Last 5
 ```
 
+### 每日最小核对（建议 2 条）
+```powershell
+.\scripts\maintenance_uploader_ops.ps1 -Mode status
+.\scripts\maintenance_uploader_ops.ps1 -Mode health -AsReport
+python -m src.long_task_optimizer --version
+git log -1 --oneline
+```
+
+### 一句话启动（推荐）
+```powershell
+# 先跑观察模式，确认任务与窗口口径
+.\scripts\maintenance_uploader_cadence.ps1 -Mode init
+
+# 需要自动提交时，改用 AutoCommit（会把计划任务改为可持续上传）
+.\scripts\maintenance_uploader_cadence.ps1 -Mode init -AutoCommit -AdaptiveLoop
+
+# 一条命令版本：统一定时脚本入口（同样采用 25 分钟小窗口 + 2 小时大窗口）
+.\scripts\maintenance_uploader_timer.ps1 -Mode bootstrap -AutoCommit
+
+# 常驻本地运行（适合不希望任务计划器的人手持环境）
+.\scripts\maintenance_uploader_cadence.ps1 -Mode run-loop -AdaptiveLoop
+
+# 每次优化后执行一次闭环（按窗口自动推进，不变更不重复备份）
+python scripts/maintenance_uploader.py --repo . --auto-round --auto-execute --tag-on-upload --version-step 2 --small-interval-seconds 1500 --major-interval-seconds 7200 --max-backups 10
+Get-ChildItem .\\.maintenance\\backups | Sort-Object LastWriteTime -Descending | Select-Object -First 3 -Property FullName, LastWriteTime
+
+# 快速查健康
+.\scripts\maintenance_uploader_cadence.ps1 -Mode health -TailLines 200
+```
+
 脚本每次检测项目文件指纹变化；发生变化时先创建本地 ZIP 备份，再按轮次和时间窗口给出上传结果。循环模式不会因为上传器自己的状态文件而重复备份或触发上传。
 
 最小可见行为（建议每周）
@@ -68,19 +98,32 @@ Select-String -Path .\\.maintenance\\logs\\maintenance_uploader.log -Pattern '"u
 .\scripts\maintenance_uploader_scheduler.ps1 -LogPath ".\\.maintenance\\logs\\maintenance_uploader.log"
 .\scripts\maintenance_uploader_schedule_task.ps1 -Mode install -TaskIntervalMinutes 1 -AutoRound -AutoExecute -VersionStep 2
 .\scripts\maintenance_uploader_schedule_task.ps1 -Mode install -TaskIntervalMinutes 1 -AutoRound -AutoExecute -VersionStep 2 -LogPath ".\\.maintenance\\logs\\maintenance_uploader.log"
+.\scripts\maintenance_uploader_schedule_task.ps1 -Mode install -TaskIntervalMinutes 1 -AutoRound -AutoExecute -VersionStep 2 -AdaptiveLoop -AuditCsv ".\\.maintenance\\logs\\maintenance_uploader_audit.csv"
+.\scripts\maintenance_uploader_schedule_task.ps1 -Mode install -TaskIntervalMinutes 1 -AutoRound -AutoExecute -VersionStep 2 -AdaptiveLoop -ReplaceIfExists -MaxRound 100 -AuditCsv ".\\.maintenance\\logs\\maintenance_uploader_audit.csv"
 .\scripts\maintenance_uploader_schedule_task.ps1 -Mode status
 .\scripts\maintenance_uploader_schedule_task.ps1 -Mode uninstall
 Select-String -Path .\\.maintenance\\logs\\maintenance_uploader.log -Pattern '"mode":' | Select-Object -Last 5
 .\scripts\maintenance_uploader_scheduler.ps1 -Loop -LogPath $loopLog
+.\scripts\maintenance_uploader_ops.ps1 -Mode status
+.\scripts\maintenance_uploader_ops.ps1 -Mode start
+.\scripts\maintenance_uploader_ops.ps1 -Mode run
+.\scripts\maintenance_uploader_ops.ps1 -Mode health
+.\scripts\maintenance_uploader_ops.ps1 -Mode stop
+.\scripts\maintenance_uploader_ops.ps1 -Mode run-loop -AdaptiveLoop -AuditCsv ".\\.maintenance\\logs\\maintenance_uploader_audit.csv"
 说明：默认不加 `-Loop` 时，任务计划会按 "每分钟执行一次短流程"，只负责一次检测；若需手工驻留运行，可加 `-Loop` 让该计划命令持续运行。
 .\scripts\maintenance_uploader_scheduler.ps1 -LogPath $loopLog -MaxLogBytes 5242880
 说明：日志超出 5MB 时会自动轮转为 `maintenance_uploader.log.YYYYMMDD_HHMMSS`。
 说明：脚本默认自动加互斥锁，防止计划任务在一分钟内重叠执行；如果你需要自定义锁文件，可加 `-LockPath`。
+说明：`maintenance_uploader_schedule_task.ps1` 与 `maintenance_uploader_scheduler.ps1` 会自动探测可用 Python 命令（`python`、`python3`、`py`），单点 python 不可用时仍可启动。
 说明：`-MaxLockAgeSeconds` 可调节互斥锁最大有效时长（默认 1200 秒）；当检测到过期死锁且 PID 不存在时会自动清理并接管执行，避免调度长期挂起。
+说明：调度器每次执行完成都会清理互斥锁文件，异常中断时才依赖 `-MaxLockAgeSeconds` 的过期回收。
+说明：`LogPath`、`AuditCsv`、`AuditPath` 若为相对路径，运行脚本会自动按仓库根路径展开为绝对路径，避免任务计划上下文导致文件落位分散。
 .\scripts\maintenance_uploader_health.ps1 -LogPath ".\\.maintenance\\logs\\maintenance_uploader.log" -TailLines 200
 说明：用于快速统计最近执行状态，判断是否有长时间 `idle`、解析异常或未触发上传情况。
-.\scripts\maintenance_uploader_health.ps1 -LogPath ".\\.maintenance\\logs\\maintenance_uploader.log" -TailLines 400 -AlertNoUploadWindow 8 -AsReport
+说明：支持解析 `status:` / `状态：{...}` 中的 `cycle_version`、`project_version`、`round_action`、`state_source`、`cycle_tag`、`cycles_completed`、`round_cycle_completed`、`cycle_boundary_round`、`cycle_boundary_ts` 与窗口倒计时字段（`nearest_small_due` / `nearest_major_due`，同时保留 `next_small_upload_due_seconds` / `next_major_upload_due_seconds`），适合日报汇报。
+.\scripts\maintenance_uploader_health.ps1 -LogPath ".\\.maintenance\\logs\\maintenance_uploader.log" -TailLines 400 -AlertNoUploadWindow 8 -AsReport -AuditPath ".\\.maintenance\\logs\\maintenance_uploader_audit.csv"
 说明：返回一行 CSV，可直接写入日报表。
+说明：加 `-AuditPath` 后会把摘要追加到 CSV，便于长期挤牙膏式迭代留痕。
 说明：如果 `maintenance_uploader.py` 解析 PROJECT_STATE 失败，会在 `状态：{...}` 里出现 `mode=error`，在日报 `risk_flag` 中通常显示 `warn`。
 说明：状态行增加 `next_small_upload_due_seconds` 与 `next_major_upload_due_seconds`，可直接用于“下一次上传窗口”汇报。
 python .\scripts\maintenance_uploader.py --repo . --advance-round         # 每次优化完成后手工调用，推进轮次
