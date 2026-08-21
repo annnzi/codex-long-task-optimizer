@@ -7,7 +7,7 @@ import json
 import re
 import sys
 from dataclasses import dataclass, asdict
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from src import __version__
@@ -37,6 +37,10 @@ SECTION_LINE_PREFIX_PATTERNS = (
     r"^\s*\d+[.)]\s+",
     r"^\s*[（(]\d+[）)]\s+",
 )
+
+
+def _utc_timestamp() -> str:
+    return datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
 
 
 @dataclass
@@ -246,7 +250,10 @@ def build_report(text: str, max_tokens: int = 120, no_risk: bool = False) -> dic
     chunks = _split_text(text, max_tokens=max_tokens)
     checkpoints = _build_checkpoints(chunks, no_risk=no_risk)
     return {
-        "generated_at": datetime.utcnow().isoformat(timespec="seconds") + "Z",
+        "schema_version": "1.0",
+        "app": APP_NAME,
+        "version": VERSION,
+        "generated_at": _utc_timestamp(),
         "complexity": _score_complexity(sections),
         "summary": sections["目标"][:120] or "未识别到明确目标",
         "constraints": [x for x in [sections["约束"]] if x],
@@ -258,6 +265,9 @@ def build_report(text: str, max_tokens: int = 120, no_risk: bool = False) -> dic
 def _to_markdown(data: dict, include_risk: bool = True) -> str:
     lines = [
         "# 长任务优化结果",
+        f"- 应用：{data.get('app', APP_NAME)}",
+        f"- 版本：{data.get('version', VERSION)}",
+        f"- 输出协议：{data.get('schema_version', '1.0')}",
         f"- 生成时间：{data['generated_at']}",
         f"- 复杂度：{data['complexity']}/100",
         f"- 目标摘要：{data['summary']}",
@@ -293,7 +303,7 @@ def _status_payload() -> dict[str, str]:
         "app": APP_NAME,
         "version": VERSION,
         "python": f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}",
-        "generated_at": datetime.utcnow().isoformat(timespec="seconds") + "Z",
+        "generated_at": _utc_timestamp(),
     }
 
 
