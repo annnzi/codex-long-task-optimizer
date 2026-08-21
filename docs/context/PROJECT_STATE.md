@@ -13,9 +13,9 @@
 - 本轮补充：`maintenance_uploader_schedule_task.ps1` 优化任务不存在分支处理，`status` 不再抛出 schtasks 异常输出。
 
 ## 当前分支与 HEAD
-- 当前分支：`main`
-- HEAD：`0001375`（本轮未提交）
-- 工作区：有未提交改动（优化进行中）
+- 当前分支：`codex/maintenance-v0.3.2`
+- HEAD：`4a3c96f`（已提交并推送到版本分支）
+- 工作区：无未提交改动
 
 ## 最近代码修改
 - 本轮新增：`maintenance_uploader.py` 新增 `100` 轮周期里程碑记录能力，补充 `last_cycle_boundary_round`、`last_cycle_boundary_ts`，在 `round_cycle_completed` 触发时输出 `cycle_boundary_*` 字段到状态 JSON。
